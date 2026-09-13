@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="description" content="Portmonka – osobní přehled provizních příjmů.">
+  <title>Portmonka</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">₽</div>
+      <div>
+        <div class="brand-name">Portmonka</div>
+        <div class="brand-sub">přehled provizních příjmů</div>
+      </div>
+    </div>
+    <button class="icon-btn" id="settingsBtn" aria-label="Nastavení">⚙</button>
+  </header>
+
+  <main class="app-shell">
+    <section id="view-now" class="view active">
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">DNEŠNÍ PŘEHLED</div>
+          <h1>Co mám řešit teď?</h1>
+          <p class="muted">Fakturovatelné peníze a nejbližší očekávané příjmy.</p>
+        </div>
+        <button class="primary-btn" id="addBtn">＋ Přidat</button>
+      </div>
+
+      <div class="metric-grid">
+        <article class="metric-card accent">
+          <div class="metric-label">Lze fakturovat</div>
+          <div class="metric-value" id="nowBillable">0 Kč</div>
+          <div class="metric-foot" id="nowBillableCount">0 splátek</div>
+        </article>
+        <article class="metric-card">
+          <div class="metric-label">Čeká nejdřív</div>
+          <div class="metric-value" id="nowUpcoming">0 Kč</div>
+          <div class="metric-foot" id="nowUpcomingText">—</div>
+        </article>
+      </div>
+
+      <section class="section">
+        <div class="section-title">
+          <h2>Akce</h2>
+          <span class="pill danger" id="actionCount">0</span>
+        </div>
+        <div id="actionList" class="stack"></div>
+      </section>
+
+      <section class="section">
+        <div class="section-title">
+          <h2>Výhled</h2>
+          <span class="muted small">další měsíce</span>
+        </div>
+        <div id="forecastList" class="forecast"></div>
+      </section>
+    </section>
+
+    <section id="view-income" class="view">
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">CASH FLOW</div>
+          <h1>Příjem</h1>
+          <p class="muted">Počítá se podle skutečného data, kdy peníze dorazily.</p>
+        </div>
+      </div>
+
+      <div class="period-switch">
+        <button data-period="month" class="active">Tento měsíc</button>
+        <button data-period="week">Tento týden</button>
+      </div>
+
+      <div class="income-total">
+        <span>Skutečně přišlo</span>
+        <strong id="incomeTotal">0 Kč</strong>
+      </div>
+
+      <div id="incomeBySource" class="source-grid"></div>
+
+      <section class="section">
+        <div class="section-title">
+          <h2>Trend</h2>
+          <span class="muted small">posledních 6 období</span>
+        </div>
+        <div id="trendChart" class="trend-chart"></div>
+      </section>
+
+      <section class="section">
+        <div class="section-title">
+          <h2>Poslední platby</h2>
+        </div>
+        <div id="paymentList" class="stack"></div>
+      </section>
+    </section>
+
+    <section id="view-cases" class="view">
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">EVIDENCE</div>
+          <h1>Případy</h1>
+          <p class="muted">Každý obchodní případ a jeho splátky na jednom místě.</p>
+        </div>
+        <button class="primary-btn" id="addBtn2">＋ Přidat</button>
+      </div>
+
+      <div class="toolbar">
+        <input id="caseSearch" class="input" type="search" placeholder="Hledat město, zákazníka, zakázku…">
+        <select id="sourceFilter" class="input">
+          <option value="all">Všechny zdroje</option>
+          <option>Pro-Factor</option>
+          <option>GOORN</option>
+          <option>Domoveo.cz</option>
+          <option>Grafika</option>
+        </select>
+      </div>
+      <div id="caseList" class="case-list"></div>
+    </section>
+
+    <section id="view-summary" class="view">
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">CELKOVÝ PŘEHLED</div>
+          <h1>Souhrn</h1>
+          <p class="muted">Celoživotní stav evidovaných provizí.</p>
+        </div>
+      </div>
+
+      <div class="metric-grid three">
+        <article class="metric-card">
+          <div class="metric-label">Celkem</div>
+          <div class="metric-value" id="summaryTotal">0 Kč</div>
+        </article>
+        <article class="metric-card">
+          <div class="metric-label">Proplaceno</div>
+          <div class="metric-value good" id="summaryPaid">0 Kč</div>
+        </article>
+        <article class="metric-card">
+          <div class="metric-label">Zbývá</div>
+          <div class="metric-value" id="summaryRemaining">0 Kč</div>
+        </article>
+      </div>
+
+      <section class="section">
+        <div class="section-title"><h2>Podle zdroje</h2></div>
+        <div id="summarySources" class="summary-table"></div>
+      </section>
+    </section>
+  </main>
+
+  <nav class="bottom-nav" aria-label="Hlavní navigace">
+    <button data-view="now" class="nav-item active"><span>⌂</span><small>Teď</small></button>
+    <button data-view="income" class="nav-item"><span>↗</span><small>Příjem</small></button>
+    <button data-view="cases" class="nav-item"><span>▤</span><small>Případy</small></button>
+    <button data-view="summary" class="nav-item"><span>◉</span><small>Souhrn</small></button>
+  </nav>
+
+  <div class="modal-backdrop" id="modalBackdrop" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-head">
+        <div>
+          <div class="eyebrow">NOVÝ ZÁZNAM</div>
+          <h2 id="modalTitle">Přidat případ</h2>
+        </div>
+        <button class="icon-btn" id="closeModal">×</button>
+      </div>
+
+      <form id="caseForm">
+        <label>Zdroj
+          <select id="fSource" class="input" required>
+            <option>Pro-Factor</option>
+            <option>GOORN</option>
+            <option>Domoveo.cz</option>
+            <option>Grafika</option>
+          </select>
+        </label>
+
+        <label>Označení případu
+          <input id="fTitle" class="input" required placeholder="např. Dvůr Králové – plakáty">
+        </label>
+
+        <label>Datum spouštěcí události
+          <input id="fTriggerDate" class="input" type="date" required>
+        </label>
+
+        <label>Celková provize
+          <input id="fAmount" class="input" type="number" min="0" step="1" required placeholder="např. 25000">
+        </label>
+
+        <div id="goornSplitWrap" class="conditional">
+          <div class="form-row">
+            <label>1. část (%)
+              <input id="fSplit" class="input" type="number" min="1" max="99" value="50">
+            </label>
+            <label>2. část za (měsíce)
+              <input id="fDelay" class="input" type="number" min="1" max="60" value="12">
+            </label>
+          </div>
+        </div>
+
+        <div class="form-help" id="formHelp"></div>
+
+        <button class="primary-btn full" type="submit">Vytvořit případ</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="detailBackdrop" hidden>
+    <div class="modal detail-modal" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <div>
+          <div class="eyebrow" id="detailSource">ZDROJ</div>
+          <h2 id="detailTitle">Případ</h2>
+        </div>
+        <button class="icon-btn" id="closeDetail">×</button>
+      </div>
+      <div id="detailBody"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
