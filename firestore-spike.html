@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1020">
+  <title>Portmonka — Firestore Spike</title>
+  <style>
+    :root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#e5e7eb;background:#0b1020}
+    body{margin:0;min-height:100vh;display:grid;place-items:center;padding:20px;box-sizing:border-box}
+    main{width:min(720px,100%);background:#111827;border:1px solid #263244;border-radius:20px;padding:24px;box-sizing:border-box}
+    h1{margin:0 0 8px;font-size:28px}.muted{color:#9ca3af;line-height:1.5}
+    button{width:100%;margin-top:10px;padding:14px 16px;border:0;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer}
+    button:disabled{opacity:.45;cursor:not-allowed}
+    .primary{background:#f3f4f6;color:#111827}.secondary{background:#374151;color:#fff}.danger{background:#7f1d1d;color:#fff}
+    .status{margin-top:20px;padding:16px;border-radius:12px;background:#0b1220;white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,monospace;font-size:13px}
+    .ok{color:#86efac}.err{color:#fca5a5}.warn{color:#fde68a}.info{color:#cbd5e1}
+    .small{font-size:12px;color:#6b7280;margin-top:14px}
+    .testbox{margin-top:18px;padding:16px;border:1px solid #263244;border-radius:14px;background:#0d1424}
+    .testbox h2{font-size:17px;margin:0 0 8px}.path{font-family:ui-monospace,monospace;font-size:12px;color:#9ca3af;word-break:break-all}
+  </style>
+</head>
+<body>
+<main>
+  <h1>Portmonka — Firestore Spike</h1>
+  <p class="muted">Izolovaný test: Firebase Auth → Cloud Firestore → Security Rules. Testovací dokumenty se vytvářejí pouze pod aktuálně přihlášeným účtem a po testu je lze smazat.</p>
+
+  <button id="loginBtn" class="primary">1. Přihlásit přes Google</button>
+  <button id="logoutBtn" class="danger">Odhlásit</button>
+
+  <div class="testbox">
+    <h2>Firestore test</h2>
+    <div id="path" class="path">Cesta bude známa po přihlášení.</div>
+    <button id="writeBtn" class="primary" disabled>2. Zapsat vlastní testovací data</button>
+    <button id="readBtn" class="secondary" disabled>3. Přečíst vlastní testovací data</button>
+    <button id="denyReadBtn" class="secondary" disabled>4. Zkusit číst data jiného userId</button>
+    <button id="denyWriteBtn" class="secondary" disabled>5. Zkusit zapisovat pod jiným userId</button>
+    <button id="deleteBtn" class="danger" disabled>6. Smazat vlastní testovací data</button>
+  </div>
+
+  <div id="status" class="status info">Inicializuji Firebase…</div>
+  <div class="small">Toto není produkční aplikace. Test používá cestu users/{userId}/cases/firestore-spike-{uid}/installments/test-installment.</div>
+</main>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+  import {
+    getAuth,
+    GoogleAuthProvider,
+    signInWithPopup,
+    onAuthStateChanged,
+    signOut
+  } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+  import {
+    getFirestore,
+    doc,
+    setDoc,
+    getDoc,
+    deleteDoc
+  } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAw4mguBLX5RKw0qponSyGEacwiExt4OkI",
+    authDomain: "portmonka-951967.firebaseapp.com",
+    projectId: "portmonka-951967",
+    storageBucket: "portmonka-951967.firebasestorage.app",
+    messagingSenderId: "723477690356",
+    appId: "1:723477690356:web:261e152b2da52251b2ba1"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const provider = new GoogleAuthProvider();
+
+  const status = document.getElementById("status");
+  const pathEl = document.getElementById("path");
+  const loginBtn = document.getElementById("loginBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const writeBtn = document.getElementById("writeBtn");
+  const readBtn = document.getElementById("readBtn");
+  const denyReadBtn = document.getElementById("denyReadBtn");
+  const denyWriteBtn = document.getElementById("denyWriteBtn");
+  const deleteBtn = document.getElementById("deleteBtn");
+
+  let currentUser = null;
+  let caseRef = null;
+  let installmentRef = null;
+
+  function show(message, kind = "info") {
+    status.className = `status ${kind}`;
+    status.textContent = message;
+  }
+
+  function describeError(error) {
+    return [
+      `code: ${error?.code || "neznámý"}`,
+      `message: ${error?.message || "bez zprávy"}`
+    ].join("\n");
+  }
+
+  function setButtons(enabled) {
+    writeBtn.disabled = !enabled;
+    readBtn.disabled = !enabled;
+    denyReadBtn.disabled = !enabled;
+    denyWriteBtn.disabled = !enabled;
+    deleteBtn.disabled = !enabled;
+  }
+
+  function buildRefs(user) {
+    const caseId = `firestore-spike-${user.uid}`;
+    caseRef = doc(db, "users", user.uid, "cases", caseId);
+    installmentRef = doc(caseRef, "installments", "test-installment");
+    pathEl.textContent = `users/${user.uid}/cases/${caseId}/installments/test-installment`;
+  }
+
+  onAuthStateChanged(auth, (user) => {
+    currentUser = user;
+    if (user) {
+      buildRefs(user);
+      setButtons(true);
+      show(`PŘIHLÁŠENÍ OK\nemail: ${user.email || "—"}\nuid: ${user.uid}\n\nDalší krok: zapiš vlastní testovací data.`, "ok");
+    } else {
+      caseRef = null;
+      installmentRef = null;
+      pathEl.textContent = "Cesta bude známa po přihlášení.";
+      setButtons(false);
+      show("Firebase Auth je inicializována. Uživatel zatím není přihlášen.", "warn");
+    }
+  });
+
+  loginBtn.addEventListener("click", async () => {
+    show("Otevírám Google přihlášení…", "warn");
+    try {
+      const result = await signInWithPopup(auth, provider);
+      show(`POPUP PŘIHLÁŠENÍ OK\nemail: ${result.user.email || "—"}\nuid: ${result.user.uid}`, "ok");
+    } catch (error) {
+      show(`POPUP CHYBA\n${describeError(error)}`, "err");
+    }
+  });
+
+  logoutBtn.addEventListener("click", async () => {
+    try {
+      await signOut(auth);
+      show("Odhlášení OK.", "ok");
+    } catch (error) {
+      show(`ODHLÁŠENÍ CHYBA\n${describeError(error)}`, "err");
+    }
+  });
+
+  writeBtn.addEventListener("click", async () => {
+    if (!currentUser || !caseRef || !installmentRef) return;
+    show("Zapisuji vlastní testovací case + installment…", "warn");
+    try {
+      await setDoc(caseRef, {
+        type: "firestore-spike",
+        ownerUid: currentUser.uid,
+        createdAt: new Date().toISOString()
+      });
+      await setDoc(installmentRef, {
+        type: "firestore-spike",
+        ownerUid: currentUser.uid,
+        amount: 1,
+        createdAt: new Date().toISOString()
+      });
+      show("WRITE PASS\nVlastní case i installment byly zapsány.", "ok");
+    } catch (error) {
+      show(`WRITE FAIL\n${describeError(error)}`, "err");
+    }
+  });
+
+  readBtn.addEventListener("click", async () => {
+    if (!currentUser || !installmentRef) return;
+    show("Čtu vlastní testovací installment…", "warn");
+    try {
+      const snapshot = await getDoc(installmentRef);
+      if (!snapshot.exists()) {
+        show("READ FAIL\nTestovací installment neexistuje. Nejprve proveď WRITE.", "err");
+        return;
+      }
+      show(`READ PASS\nData vlastníka byla přečtena.\namount: ${snapshot.data().amount}\nownerUid: ${snapshot.data().ownerUid}`, "ok");
+    } catch (error) {
+      show(`READ FAIL\n${describeError(error)}`, "err");
+    }
+  });
+
+  denyReadBtn.addEventListener("click", async () => {
+    if (!currentUser) return;
+    const otherUserId = "firestore-spike-other-user";
+    const otherRef = doc(db, "users", otherUserId, "cases", "firestore-spike-other", "installments", "test-installment");
+    show("Zkouším přečíst data pod jiným userId… Očekáváme DENY.", "warn");
+    try {
+      await getDoc(otherRef);
+      show("SECURITY FAIL\nČtení pod cizím userId bylo povoleno. To nechceme.", "err");
+    } catch (error) {
+      if (error?.code === "permission-denied") {
+        show("DENY READ PASS\nFirestore správně odmítl čtení pod cizím userId.\npermission-denied", "ok");
+      } else {
+        show(`DENY READ TEST NEURČITÝ\n${describeError(error)}`, "err");
+      }
+    }
+  });
+
+  denyWriteBtn.addEventListener("click", async () => {
+    if (!currentUser) return;
+    const otherUserId = "firestore-spike-other-user";
+    const otherRef = doc(db, "users", otherUserId, "cases", "firestore-spike-other", "installments", "test-installment");
+    show("Zkouším zapisovat pod jiným userId… Očekáváme DENY.", "warn");
+    try {
+      await setDoc(otherRef, {
+        type: "firestore-spike-unauthorized",
+        ownerUid: currentUser.uid,
+        amount: 999
+      });
+      show("SECURITY FAIL\nZápis pod cizím userId byl povolen. To nechceme.", "err");
+    } catch (error) {
+      if (error?.code === "permission-denied") {
+        show("DENY WRITE PASS\nFirestore správně odmítl zápis pod cizím userId.\npermission-denied", "ok");
+      } else {
+        show(`DENY WRITE TEST NEURČITÝ\n${describeError(error)}`, "err");
+      }
+    }
+  });
+
+  deleteBtn.addEventListener("click", async () => {
+    if (!currentUser || !caseRef || !installmentRef) return;
+    show("Mažu vlastní testovací data…", "warn");
+    try {
+      await deleteDoc(installmentRef);
+      await deleteDoc(caseRef);
+      show("CLEANUP PASS\nVlastní testovací case i installment byly smazány.", "ok");
+    } catch (error) {
+      show(`CLEANUP FAIL\n${describeError(error)}`, "err");
+    }
+  });
+</script>
+</body>
+</html>
