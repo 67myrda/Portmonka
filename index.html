@@ -178,6 +178,11 @@ function openDetail(id){
  const c=state.cases.find(x=>x.id===id);if(!c)return;$("detailSource").textContent=c.source;$("detailTitle").textContent=c.title;
  $("detailBody").innerHTML=`<div class="detail-block"><div class="detail-grid"><div><span>Spouštěcí datum</span><br><strong>${fmtDate(c.triggerDate)}</strong></div><div><span>Celková provize</span><br><strong>${fmtMoneyMinor(c.totalAmountMinor)}</strong></div></div></div>`+(c.installments||[]).map(i=>{const s=status(i);return`<div class="detail-block"><div class="card-title">${esc(i.label)} · ${fmtMoneyMinor(i.amountMinor)}</div><div class="card-meta">Nárok: ${fmtDate(i.claimDate)} · stav: ${statusLabel(s)}</div><div class="card-actions">${s==="lze fakturovat"?`<button class="small-btn primary" onclick="markInvoiced('${c.id}','${i.id}')">Označit vyfakturováno</button>`:""}${s==="vyfakturovano"?`<button class="small-btn primary" onclick="markPaid('${c.id}','${i.id}')">Označit proplaceno dnes</button>`:""}${s==="proplaceno"?`<span class="pill good">Proplaceno ${fmtDate(i.paidAt)}</span>`:""}</div></div>`}).join("")+`<button class="small-btn" onclick="removeCase('${c.id}')">Odstranit případ</button>`;$("detailBackdrop").hidden=false
 }
+window.markInvoiced=markInvoiced;
+window.markPaid=markPaid;
+window.openDetail=openDetail;
+window.removeCase=removeCase;
+
 function updateFormHelp(){const s=$("fSource").value,w=$("goornSplitWrap"),h=$("formHelp");if(s==="Pro-Factor"){w.classList.remove("show");h.textContent="Pro-Factor: 75 % při uzavření města, druhých 25 % po 4 měsících."}else if(s==="GOORN"){w.classList.add("show");h.textContent="GOORN: poměr je nastavitelný pro konkrétní případ. Výchozí 50/50, druhá část standardně za 12 měsíců."}else{w.classList.remove("show");h.textContent=s==="Domoveo.cz"?"Domoveo.cz: jedna provize bez časového rozdělení.":"Grafika: jednorázová ruční odměna."}}
 async function demo(){
  const d=o=>{const x=new Date();x.setDate(x.getDate()+o);return x.toISOString().slice(0,10)},data=[
