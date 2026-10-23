@@ -2,10 +2,10 @@
 // Matematika = aplikace. Všechny částky v haléřích (amountMinor), data jako "RRRR-MM-DD".
 
 export const SOURCES = {
-  'Pro-Factor': { key: 'pf', name: 'Pro-Factor', color: '#f5b84a', trigger: 'uzavření města' },
-  'GOORN':      { key: 'go', name: 'GOORN',      color: '#4ade9b', trigger: 'instalace přístroje' },
-  'Domoveo.cz': { key: 'dm', name: 'Domoveo',    color: '#6ea8ff', trigger: 'podpis objednávky' },
-  'Grafika':    { key: 'gr', name: 'Grafika',    color: '#c49bff', trigger: 'zakázka' }
+  'Pro-Factor': { key: 'pf', name: 'Pro-Factor', color: '#f5b84a', trigger: 'uzavření města', icon: 'profactor' },
+  'GOORN':      { key: 'go', name: 'GOORN',      color: '#4ade9b', trigger: 'instalace přístroje', icon: 'goorn' },
+  'Domoveo.cz': { key: 'dm', name: 'Domoveo',    color: '#6ea8ff', trigger: 'podpis objednávky', icon: 'domoveo' },
+  'Grafika':    { key: 'gr', name: 'Grafika',    color: '#c49bff', trigger: 'zakázka', icon: 'grafika' }
 };
 export const SOURCE_ORDER = ['Pro-Factor', 'GOORN', 'Domoveo.cz', 'Grafika'];
 
@@ -87,7 +87,7 @@ export function buildInstallments(input) {
   if (source === 'Pro-Factor') {
     const total = input.totalMinor;
     if (!(total > 0)) throw new Error('Zadej celkovou provizi');
-    const first = Math.round(total * PF_FIRST_PCT / 100);
+    const first = Math.round(total * PF_FIRST_PCT / 10000) * 100; // celé koruny (Myrda 23. 10. 2026)
     parts = [
       { ...base, label: '75 % – 1. část', amountMinor: first, claimDate: triggerDate, conditionSatisfiedDate: triggerDate },
       { ...base, label: '25 % – 2. část', amountMinor: total - first, claimDate: addMonths(triggerDate, PF_DELAY_MONTHS), conditionSatisfiedDate: null }
@@ -206,23 +206,33 @@ export function skritek(items, today) {
   const inv = S.filter(i => i.st === ST.INVOICED).map(i => ({ ...i, age: diffDays(i.invoicedAt, today) })).sort((a, b) => b.age - a.age);
   if (inv[0] && inv[0].age >= 7) {
     const x = inv[0];
-    return { cat: 'Něco mi nesedí', title: x.title + ' je vyfakturované už ' + x.age + ' dní a pořád nic.', short: 'Platby obvykle chodí do 3 dnů po faktuře. Možná stojí za připomínku.',
+    return { pose: 'nesedi', cat: 'Něco mi nesedí', title: x.title + ' je vyfakturované už ' + x.age + ' dní a pořád nic.', short: 'Platby obvykle chodí do 3 dnů po faktuře. Možná stojí za připomínku.',
       evidence: ['vyfakturováno ' + fmtDate(x.invoicedAt) + (x.invoiceNo ? ' (faktura ' + x.invoiceNo + ')' : '') + ' · ' + fmtKc(x.amountMinor) + ' (fakt)', 'dnes je to ' + x.age + ' dní (fakt)'], kind: 'fact' };
   }
   const ready = S.filter(i => i.st === ST.READY).map(i => ({ ...i, age: diffDays(i.claimDate, today) })).sort((a, b) => b.age - a.age);
   if (ready[0] && ready[0].age >= 14) {
-    return { cat: 'Malé tajemství', title: 'Leží tu ' + fmtKc(sumMinor(ready)) + ', na které už máš nárok.', short: 'Nejstarší čeká na fakturu ' + ready[0].age + ' dní.',
+    return { pose: 'tajemstvi', cat: 'Malé tajemství', title: 'Leží tu ' + fmtKc(sumMinor(ready)) + ', na které už máš nárok.', short: 'Nejstarší čeká na fakturu ' + ready[0].age + ' dní.',
       evidence: ready.slice(0, 4).map(i => i.title + ' · ' + i.label + ' · nárok od ' + fmtDate(i.claimDate) + ' (fakt)'), kind: 'fact' };
+  }
+  const lost = S.filter(i => i.st === ST.LOST && isIso(i.lostAt) && diffDays(i.lostAt, today) <= 14);
+  if (lost.length) {
+    return { pose: 'smutny', cat: 'Smutná zpráva', title: 'Propadlo ' + fmtKc(sumMinor(lost)) + '.', short: 'Stává se. Čísla jsou poctivá i v tom, co nevyšlo.',
+      evidence: lost.slice(0, 5).map(i => i.title + ': ' + fmtKc(i.amountMinor) + ' · ' + fmtDate(i.lostAt) + (i.lostReason ? ' · ' + i.lostReason : '') + ' (fakt)'), kind: 'fact' };
   }
   const pf = S.filter(i => i.source === 'Pro-Factor' && i.st === ST.WAITING && isIso(i.claimDate));
   if (pf.length >= 2) {
-    return { cat: 'Co kdyby…', title: 'Kdyby 25 % od Pro-Factoru chodilo hned, měl bys o ' + fmtKc(sumMinor(pf)) + ' víc.', short: 'Vydělané už to je. Jen to čeká, až uplynou 4 měsíce.',
+    return { pose: 'napad', cat: 'Co kdyby…', title: 'Kdyby 25 % od Pro-Factoru chodilo hned, měl bys o ' + fmtKc(sumMinor(pf)) + ' víc.', short: 'Vydělané už to je. Jen to čeká, až uplynou 4 měsíce.',
       evidence: pf.slice(0, 5).map(i => i.title + ': ' + fmtKc(i.amountMinor) + ' od ' + fmtDate(i.claimDate) + ' (fakt)'), kind: 'hyp' };
   }
   const dm = S.filter(i => i.source === 'Domoveo.cz' && i.st === ST.WAITING && isBlocked(i));
   if (dm.length) {
-    return { cat: 'Otázka', title: 'Domoveo: ' + dm.length + ' ' + (dm.length === 1 ? 'zakázka čeká' : dm.length < 5 ? 'zakázky čekají' : 'zakázek čeká') + ' na servis.', short: 'Dokud servis neproběhne, je provize jen příslib. Když klient technika nepustí, propadá.',
+    return { pose: 'otazka', cat: 'Otázka', title: 'Domoveo: ' + dm.length + ' ' + (dm.length === 1 ? 'zakázka čeká' : dm.length < 5 ? 'zakázky čekají' : 'zakázek čeká') + ' na servis.', short: 'Dokud servis neproběhne, je provize jen příslib. Když klient technika nepustí, propadá.',
       evidence: dm.slice(0, 5).map(i => i.title + ': ' + fmtKc(i.amountMinor) + ' (fakt)'), kind: 'hyp' };
+  }
+  const paid = S.filter(i => i.st === ST.PAID && isIso(i.paidAt) && diffDays(i.paidAt, today) <= 7);
+  if (paid.length) {
+    return { pose: 'hura', cat: 'Hurá', title: 'Za posledních 7 dní ti přišlo ' + fmtKc(sumMinor(paid)) + '.', short: 'Peníze dorazily. Tohle je ta nejlepší část.',
+      evidence: paid.slice(0, 5).map(i => i.title + ': ' + fmtKc(i.amountMinor) + ' · ' + fmtDate(i.paidAt) + ' (fakt)'), kind: 'fact' };
   }
   return null;
 }

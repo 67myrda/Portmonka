@@ -12,6 +12,8 @@ test('Pro-Factor 75/25, +4 měsíce, součet sedí', () => {
   assert.equal(r.totalAmountMinor, 2500000);
   const odd = C.buildInstallments({ source: 'Pro-Factor', triggerDate: '2026-10-01', totalMinor: 100001 });
   assert.equal(C.sumMinor(odd.installments), 100001);
+  const ry = C.buildInstallments({ source: 'Pro-Factor', triggerDate: '2026-09-10', totalMinor: 9171800 });
+  assert.deepEqual(ry.installments.map(i => i.amountMinor), [6878900, 2292900]); // celé koruny
 });
 
 test('GOORN pevné částky 3 190 + 2 530, 2. část blokovaná podmínkou', () => {

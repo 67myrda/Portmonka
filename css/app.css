@@ -76,8 +76,13 @@ a{color:var(--mint)}
 .btn[disabled]{opacity:.4;pointer-events:none}
 .btn.add{display:inline-flex;align-items:center;gap:6px}
 .elf{display:flex;gap:14px;align-items:flex-start}
-.elf svg{width:80px;height:90px;flex:none;animation:floaty 4.5s ease-in-out infinite}
-.elf .eye{transform-origin:center;transform-box:fill-box;animation:blink 5s infinite}
+.elfimg{width:96px;height:96px;flex:none;object-fit:contain;animation:floaty 4.5s ease-in-out infinite;filter:drop-shadow(0 6px 18px rgba(245,184,74,.25))}
+.elf .elfimg{width:104px;height:104px}
+.empty .elfimg{width:120px;height:120px;display:block;margin:0 auto 8px}
+.si{width:22px;height:22px;object-fit:contain;vertical-align:-6px;margin-right:6px;filter:drop-shadow(0 0 6px rgba(255,255,255,.12))}
+.act .si{width:32px;height:32px;margin:0;flex:none;vertical-align:middle}
+.src .si{width:18px;height:18px;vertical-align:-5px;margin-right:5px}
+@media (max-width:560px){.elf .elfimg{width:76px;height:76px}}
 .bubble{position:relative;background:var(--s2);border:1px solid #4a3d86;border-radius:16px;padding:14px 16px;flex:1;min-width:0}
 .bubble:before{content:"";position:absolute;left:-8px;top:22px;width:14px;height:14px;background:var(--s2);border-left:1px solid #4a3d86;border-bottom:1px solid #4a3d86;transform:rotate(45deg)}
 .bubble .hl{font-family:Unbounded,sans-serif;font-weight:600;font-size:16.5px;line-height:1.25;margin:4px 0 6px}
