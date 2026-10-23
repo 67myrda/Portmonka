@@ -137,3 +137,19 @@ test('Krypto a Hravé dřevo: rovnou proplaceno, Hravé dřevo jen historie', ()
   const inc = C.income(r.installments.map(i => ({ ...i, source: 'Krypto' })), 'month', '2025-01-31');
   assert.equal(inc.cur.bySrc.Krypto, 1363000);
 });
+
+test('Statistiky: meziročně do dneška, nejlepší měsíc, roky podle zdrojů', () => {
+  const I = [
+    { source: 'Krypto', amountMinor: 1000000, paidAt: '2025-03-31' },
+    { source: 'GOORN', amountMinor: 319000, paidAt: '2025-11-20' },
+    { source: 'Pro-Factor', amountMinor: 2000000, paidAt: '2026-02-10' },
+    { source: 'GOORN', amountMinor: 100000, paidAt: '2026-12-01' },
+    { source: 'GOORN', amountMinor: 50000, paidAt: '2026-01-05', lostAt: '2026-01-06' }];
+  const s = C.stats(I, '2026-10-23');
+  assert.equal(s.ytd, 2000000); assert.equal(s.lastYtd, 1000000); assert.equal(s.yoyPct, 100);
+  assert.equal(s.lastYear, 1319000);
+  assert.deepEqual(s.best, { month: '2026-02', total: 2000000 });
+  assert.deepEqual(s.years.map(y => y.year), ['2026', '2025']);
+  assert.equal(s.years[1].bySrc.Krypto, 1000000);
+  assert.deepEqual(C.periods('year', '2026-10-23', 3).map(p => p.label), ['2024', '2025', '2026']);
+});

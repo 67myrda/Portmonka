@@ -1,6 +1,6 @@
 // Portmonka 08 – UI nad deterministickým jádrem (core.js) a datovou vrstvou (store.js).
-import * as C from './core.js?v=8.3';
-import { createFirestoreStore, createMemoryStore } from './store.js?v=8.3';
+import * as C from './core.js?v=8.4';
+import { createFirestoreStore, createMemoryStore } from './store.js?v=8.4';
 
 const DEMO = new URLSearchParams(location.search).has('demo');
 const S = { tab: 'ted', user: null, cases: [], offers: null, loaded: false, filter: 'all', q: '', open: null, incMode: 'month', sel: new Set(), showWhy: false, busy: false, err: null };
@@ -20,8 +20,8 @@ const ICON = {
   reload: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>'
 };
 const MARK = '<svg class="mark" viewBox="0 0 40 40" aria-hidden="true"><rect x="3" y="11" width="34" height="24" rx="8" fill="none" stroke="#5eead4" stroke-width="3"></rect><path d="M11 11 C11 4 29 4 29 11" fill="none" stroke="#b493ff" stroke-width="3" stroke-linecap="round"></path><circle cx="20" cy="23" r="4" fill="#5eead4"></circle><circle cx="31" cy="6" r="2" fill="#f5b84a"></circle></svg>';
-const ELF = (pose = 'klid', size = 96) => `<img class="elfimg" src="img/elf/${pose}.webp?v=8.3" alt="Skřítek Portmonky" width="${size}" height="${size}" loading="lazy">`;
-const SI = (s, sz = 22) => SRC(s).icon ? `<img class="si" src="img/src/${SRC(s).icon}.webp?v=8.3" alt="" width="${sz}" height="${sz}" loading="lazy">` : SRC(s).emoji ? `<span class="si si-e" style="font-size:${Math.round(sz * .8)}px" aria-hidden="true">${SRC(s).emoji}</span>` : '';
+const ELF = (pose = 'klid', size = 96) => `<img class="elfimg" src="img/elf/${pose}.webp?v=8.4" alt="Skřítek Portmonky" width="${size}" height="${size}" loading="lazy">`;
+const SI = (s, sz = 22) => SRC(s).icon ? `<img class="si" src="img/src/${SRC(s).icon}.webp?v=8.4" alt="" width="${sz}" height="${sz}" loading="lazy">` : SRC(s).emoji ? `<span class="si si-e" style="font-size:${Math.round(sz * .8)}px" aria-hidden="true">${SRC(s).emoji}</span>` : '';
 
 function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 2600); }
 
@@ -48,7 +48,7 @@ function header() {
   const tf = [['ted', 'Teď'], ['prijem', 'Příjem'], ['pripady', 'Případy'], ['souhrn', 'Souhrn']];
   const tx = [['cas', 'Čas'], ['obj', 'Objevitel'], ['lab', 'Laboratoř']];
   return `<header class="top"><div class="top-in">
-    <div class="brand"><img class="logo" src="img/logo-96.webp?v=8.3" alt="" width="44" height="44"><div><b class="wm">Portmonka</b><small>zvědavý účetní skřítek</small></div></div>
+    <div class="brand"><img class="logo" src="img/logo-96.webp?v=8.4" alt="" width="44" height="44"><div><b class="wm">Portmonka</b><small>zvědavý účetní skřítek</small></div></div>
     <nav class="nav" aria-label="Pohledy"><span class="grp">Finance</span>${tf.map(t => `<button type="button" class="tab${S.tab === t[0] ? ' on' : ''}" data-a="tab" data-t="${t[0]}">${t[1]}</button>`).join('')}
       <span class="grp">Objevování</span>${tx.map(t => `<button type="button" class="tab x${S.tab === t[0] ? ' on' : ''}" data-a="tab" data-t="${t[0]}">${t[1]}</button>`).join('')}</nav>
     <div class="user">${DEMO ? '<span class="demo">UKÁZKOVÁ DATA</span>' : ''}
@@ -60,7 +60,7 @@ function header() {
 function render() {
   const app = $('#app');
   if (!S.user) {
-    app.innerHTML = `<div class="wrap"><section class="login card"><img class="logo big" src="img/logo-96.webp?v=8.3" alt="Logo Portmonky" width="96" height="96">
+    app.innerHTML = `<div class="wrap"><section class="login card"><img class="logo big" src="img/logo-96.webp?v=8.4" alt="Logo Portmonky" width="96" height="96">
       <h1 class="wm">Portmonka</h1><p>Zvědavý účetní skřítek. Přihlas se přes Google, data se ukládají do tvého zabezpečeného prostoru ve Firestore.</p>
       <div class="btns" style="justify-content:center;margin-top:18px"><button type="button" class="btn solid" data-a="login">Přihlásit přes Google</button>
       <a class="btn ghost" href="?demo=1" style="text-decoration:none;display:inline-flex;align-items:center">Prohlédnout s ukázkovými daty</a></div></section></div>`;
@@ -170,22 +170,38 @@ function viewPrijem(I) {
   const pmax = Math.max(1, ...inc.periods.map(p => p.total));
   const bars = inc.periods.map((p, bi) => `<div class="bar${p.cur ? ' cur' : ''}"><div class="vl">${p.total ? Math.round(p.total / 100000) + ' tis.' : '–'}</div><div class="stack">${C.SOURCE_ORDER.map(s => p.bySrc[s] ? `<div class="seg" style="height:${p.bySrc[s] / pmax * 100}%;background:${SRC(s).color};animation-delay:${bi * .08}s"></div>` : '').join('')}</div><div class="lb">${p.label}</div></div>`).join('');
   const recent = I.filter(i => i.paidAt && !i.lostAt).sort((a, b) => b.paidAt.localeCompare(a.paidAt)).slice(0, 8);
-  const per = S.incMode === 'week' ? 'tento týden' : 'za ' + C.monShort(T) + ' ' + T.slice(0, 4);
+  const per = S.incMode === 'week' ? 'tento týden' : S.incMode === 'year' ? 'za rok ' + T.slice(0, 4) : 'za ' + C.monShort(T) + ' ' + T.slice(0, 4);
   return `<div class="grid g2">
   <section class="card">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
       <div><div class="k">Skutečně přišlo · ${per}</div><div class="disp" style="font-weight:800;font-size:clamp(32px,5vw,50px);color:#5eead4;margin-top:6px">${K(cur.total)}</div><div class="meta">podle skutečného data platby · z toho bonus ${K(cur.bonus)}</div></div>
-      <div class="seg2"><button type="button" class="${S.incMode === 'month' ? 'on' : ''}" data-a="inc" data-m="month">Měsíc</button><button type="button" class="${S.incMode === 'week' ? 'on' : ''}" data-a="inc" data-m="week">Týden</button></div>
+      <div class="seg2"><button type="button" class="${S.incMode === 'month' ? 'on' : ''}" data-a="inc" data-m="month">Měsíc</button><button type="button" class="${S.incMode === 'week' ? 'on' : ''}" data-a="inc" data-m="week">Týden</button><button type="button" class="${S.incMode === 'year' ? 'on' : ''}" data-a="inc" data-m="year">Rok</button></div>
     </div>
     <div class="bars">${bars}</div>
-    <div class="meta" style="margin-top:8px">Tempo: průměr ${K(inc.avg)} za ${S.incMode === 'week' ? 'týden' : 'měsíc'} (posledních 6 období)</div>
+    <div class="meta" style="margin-top:8px">Tempo: průměr ${K(inc.avg)} za ${S.incMode === 'week' ? 'týden' : S.incMode === 'year' ? 'rok' : 'měsíc'} (posledních ${S.incMode === 'year' ? 3 : 6} období)</div>
   </section>
   <section class="card"><div class="k">Odkud to přišlo · ${per}</div>
     <div class="share">${C.SOURCE_ORDER.map(s => `<i style="width:${cur.total ? cur.bySrc[s] / cur.total * 100 : 0}%;background:${SRC(s).color}"></i>`).join('')}</div>
-    ${C.SOURCE_ORDER.map(s => `<div class="row"><div class="l"><b style="color:${SRC(s).color}">${SI(s, 22)}${SRC(s).name}</b><span>${cur.total ? Math.round(cur.bySrc[s] / cur.total * 100) : 0} %</span></div><span class="mono">${K(cur.bySrc[s])}</span></div>`).join('')}
+    ${C.SOURCE_ORDER.filter((s, k) => k < 4 || cur.bySrc[s]).map(s => `<div class="row"><div class="l"><b style="color:${SRC(s).color}">${SI(s, 22)}${SRC(s).name}</b><span>${cur.total ? Math.round(cur.bySrc[s] / cur.total * 100) : 0} %</span></div><span class="mono">${K(cur.bySrc[s])}</span></div>`).join('')}
     <div class="k" style="margin-top:18px">Poslední platby</div>
     ${recent.length ? recent.map(i => `<div class="row" data-a="open" data-c="${i.caseId}" style="cursor:pointer"><div class="l"><b>${esc(SRC(i.source).name + ' · ' + i.title)}</b><span>${esc(i.label)}${i.kind === 'bonus' ? ' · bonus' : ''} · ${C.fmtDateShort(i.paidAt)}</span></div><span class="mono" style="color:${SRC(i.source).color}">+ ${K(i.amountMinor)}</span></div>`).join('') : '<div class="empty">Zatím žádná proplacená splátka.</div>'}
-  </section></div>`;
+  </section></div>
+  ${viewStats(I, T)}`;
+}
+function viewStats(I, T) {
+  const st = C.stats(I, T);
+  if (!st.years.length) return '';
+  const y = T.slice(0, 4), up = st.yoyPct != null && st.yoyPct >= 0;
+  const srcs = C.SOURCE_ORDER.filter(s => st.years.some(r => r.bySrc[s]));
+  return `<section class="card" style="margin-top:14px"><div class="k">Statistiky · skutečné platby</div>
+    <div class="outl" style="margin-top:10px">
+      <div><span class="meta">${y} do dneška</span><b>${K(st.ytd)}</b><span class="meta">${st.yoyPct == null ? 'loni ve stejném období nic' : `<b style="color:${up ? '#4ade9b' : '#ff8a7a'}">${up ? '+' : ''}${st.yoyPct} %</b> proti ${K(st.lastYtd)} loni`}</span></div>
+      <div><span class="meta">celý rok ${Number(y) - 1}</span><b>${K(st.lastYear)}</b><span class="meta">průměr ${K((st.years.find(r => r.year === String(Number(y) - 1)) || {}).avgMonth || 0)} / měsíc</span></div>
+      ${st.best ? `<div><span class="meta">nejlepší měsíc</span><b>${K(st.best.total)}</b><span class="meta">${C.monShort(st.best.month + '-01')} ${st.best.month.slice(0, 4)}</span></div>` : ''}
+    </div>
+    <div class="tblwrap"><table class="stt"><thead><tr><th>Rok</th>${srcs.map(s => `<th style="color:${SRC(s).color}">${SI(s, 16)}${SRC(s).name}</th>`).join('')}<th>Celkem</th></tr></thead>
+      <tbody>${st.years.map(r => `<tr><td>${r.year}</td>${srcs.map(s => `<td class="mono">${r.bySrc[s] ? K(r.bySrc[s]) : '–'}</td>`).join('')}<td class="mono"><b>${K(r.total)}</b></td></tr>`).join('')}</tbody></table></div>
+    <div class="meta" style="margin-top:8px">Historie před rokem 2026: Pro-Factor z archivu Taháku, GOORN z appky (doplatky odhadem +3 měsíce, rok 2024 jako roční součet), Hravé dřevo a krypto z tabulky 2025.</div></section>`;
 }
 
 /* ---------------- PŘÍPADY ---------------- */

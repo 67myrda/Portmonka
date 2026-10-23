@@ -149,7 +149,10 @@ export function paidBetween(items, start, end) {
 // 6 období (měsíce nebo týdny) končících dnešním
 export function periods(mode, today, n = 6) {
   const out = [];
-  if (mode === 'week') {
+  if (mode === 'year') {
+    const y0 = Number(today.slice(0, 4));
+    for (let k = n - 1; k >= 0; k--) { const y = y0 - k; out.push({ start: y + '-01-01', end: y + '-12-31', label: String(y), cur: k === 0 }); }
+  } else if (mode === 'week') {
     const w0 = startOfWeek(today);
     for (let k = n - 1; k >= 0; k--) {
       const s = addDays(w0, -7 * k), e = addDays(s, 6);
@@ -165,7 +168,7 @@ export function periods(mode, today, n = 6) {
   return out;
 }
 export function income(items, mode, today) {
-  const ps = periods(mode, today).map(p => {
+  const ps = periods(mode, today, mode === 'year' ? 3 : 6).map(p => {
     const xs = paidBetween(items, p.start, p.end);
     const bySrc = {}; SOURCE_ORDER.forEach(s => bySrc[s] = sumMinor(xs.filter(x => x.source === s)));
     return { ...p, items: xs, total: sumMinor(xs), bonus: sumMinor(xs.filter(x => x.kind === 'bonus')), bySrc };
@@ -174,6 +177,25 @@ export function income(items, mode, today) {
   const avg = Math.round(ps.reduce((a, p) => a + p.total, 0) / ps.length);
   return { periods: ps, cur, avg };
 }
+/* ---------- statistiky (fáze 2b): jen skutečné platby podle data platby ---------- */
+export function stats(items, today) {
+  const paid = items.filter(i => isIso(i.paidAt) && !i.lostAt && i.paidAt <= today);
+  const y = Number(today.slice(0, 4)), md = today.slice(5);
+  const ytd = sumMinor(paid.filter(i => i.paidAt >= y + '-01-01'));
+  const lastYtd = sumMinor(paid.filter(i => i.paidAt >= (y - 1) + '-01-01' && i.paidAt <= (y - 1) + '-' + (md === '02-29' ? '02-28' : md)));
+  const lastYear = sumMinor(paid.filter(i => i.paidAt.startsWith(String(y - 1))));
+  const months = {}; for (const i of paid) { const m = i.paidAt.slice(0, 7); months[m] = (months[m] || 0) + i.amountMinor; }
+  const best = Object.entries(months).sort((a, b) => b[1] - a[1])[0] || null;
+  const years = [...new Set(paid.map(i => i.paidAt.slice(0, 4)))].sort().reverse().map(yy => {
+    const xs = paid.filter(i => i.paidAt.startsWith(yy)), bySrc = {};
+    SOURCE_ORDER.forEach(s => bySrc[s] = sumMinor(xs.filter(x => x.source === s)));
+    const mCount = Number(yy) === y ? Number(today.slice(5, 7)) : 12;
+    return { year: yy, total: sumMinor(xs), bySrc, avgMonth: Math.round(sumMinor(xs) / mCount) };
+  });
+  return { ytd, lastYtd, lastYear, yoyPct: lastYtd ? Math.round((ytd - lastYtd) / lastYtd * 100) : null,
+    best: best ? { month: best[0], total: best[1] } : null, years };
+}
+
 export function bySource(items, today) {
   return SOURCE_ORDER.map(s => {
     const xs = items.filter(i => i.source === s);
