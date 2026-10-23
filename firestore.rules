@@ -1,25 +1,71 @@
 rules_version = '2';
 
+// Portmonka – pravidla Firestore (fáze 2, 23. 10. 2026)
+// Každý vidí jen svá data a zápis musí mít správný tvar.
+// Kompatibilní se staršími dokumenty z CORE (pole jako expectedPaymentDate zůstávají povolená).
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function owner(userId) { return request.auth != null && request.auth.uid == userId; }
+    function opt(d, k) { return d.get(k, null); }
+    function isDate(v) { return v == null || (v is string && v.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')); }
+    function isText(v, max) { return v == null || (v is string && v.size() <= max); }
+    function isMoney(v) { return v is int && v >= 0 && v <= 100000000000; }
+
+    function validCase(d) {
+      return d.keys().hasOnly(['financeSpaceId', 'source', 'title', 'triggerDate', 'triggerType', 'kind',
+                               'totalAmountMinor', 'currency', 'clientName', 'note', 'externalId', 'rate',
+                               'priceNetMinor', 'createdAt', 'updatedAt'])
+        && d.source in ['Pro-Factor', 'GOORN', 'Domoveo.cz', 'Grafika']
+        && d.title is string && d.title.size() > 0 && d.title.size() <= 200
+        && isDate(opt(d, 'triggerDate'))
+        && isMoney(d.totalAmountMinor)
+        && (opt(d, 'kind') == null || opt(d, 'kind') in ['case', 'bonus'])
+        && isText(opt(d, 'note'), 2000)
+        && isText(opt(d, 'externalId'), 100)
+        && (opt(d, 'rate') == null || opt(d, 'rate') in [17, 25])
+        && (opt(d, 'priceNetMinor') == null || isMoney(opt(d, 'priceNetMinor')));
+    }
+
+    function validInst(d) {
+      return d.keys().hasOnly(['label', 'kind', 'amountMinor', 'claimDate', 'blockingCondition',
+                               'conditionSatisfiedDate', 'invoiceEligibleDate', 'invoicedAt', 'invoiceId',
+                               'invoiceNo', 'expectedPaymentDate', 'paidAt', 'lostAt', 'lostReason', 'updatedAt'])
+        && isText(opt(d, 'label'), 120)
+        && (opt(d, 'kind') == null || opt(d, 'kind') in ['commission', 'bonus'])
+        && isMoney(d.amountMinor)
+        && isDate(opt(d, 'claimDate')) && isDate(opt(d, 'conditionSatisfiedDate'))
+        && isDate(opt(d, 'invoiceEligibleDate')) && isDate(opt(d, 'expectedPaymentDate'))
+        && isDate(opt(d, 'invoicedAt')) && isDate(opt(d, 'paidAt')) && isDate(opt(d, 'lostAt'))
+        && isText(opt(d, 'blockingCondition'), 200) && isText(opt(d, 'lostReason'), 300)
+        && isText(opt(d, 'invoiceId'), 100) && isText(opt(d, 'invoiceNo'), 50)
+        // splátka nemůže být zároveň proplacená i propadlá
+        && !(opt(d, 'paidAt') != null && opt(d, 'lostAt') != null)
+        // platba ne dřív než faktura
+        && (opt(d, 'paidAt') == null || opt(d, 'invoicedAt') == null || opt(d, 'paidAt') >= opt(d, 'invoicedAt'));
+    }
+
     match /users/{userId} {
-      allow read, write: if request.auth != null
-        && request.auth.uid == userId;
+      allow read: if owner(userId);
 
       match /cases/{caseId} {
-        allow read, write: if request.auth != null
-          && request.auth.uid == userId;
+        allow read, delete: if owner(userId);
+        allow create, update: if owner(userId) && validCase(request.resource.data);
 
         match /installments/{installmentId} {
-          allow read, write: if request.auth != null
-            && request.auth.uid == userId;
+          allow read, delete: if owner(userId);
+          allow create, update: if owner(userId) && validInst(request.resource.data);
         }
       }
 
+      // auditní deník: jen přidávat, nikdy měnit ani mazat
       match /events/{eventId} {
-        allow read, write: if request.auth != null
-          && request.auth.uid == userId;
+        allow read: if owner(userId);
+        allow create: if owner(userId)
+          && request.resource.data.type is string && request.resource.data.type.size() <= 40
+          && request.resource.data.actorUid == request.auth.uid;
+        allow update, delete: if false;
       }
     }
   }
