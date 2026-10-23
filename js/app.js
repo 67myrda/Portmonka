@@ -143,7 +143,7 @@ function timeline(I, T) {
     return `<div class="lane" style="top:${8 + li * 52}px"><span class="nm" style="color:${SRC(s).color}">${SRC(s).name}</span><span class="spark" style="background:${SRC(s).color};box-shadow:0 0 10px ${SRC(s).color};animation-delay:${li * 1.3}s"></span>${pts}</div>`;
   }).join('');
   return `<section class="card">
-    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap"><div><div class="k">Žaivá časová osa</div><div style="font-weight:700;margin-top:2px">Kam peníze putují · 2 měsíce zpět, 10 dopředu</div></div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap"><div><div class="k">Živá časová osa</div><div style="font-weight:700;margin-top:2px">Kam peníze putují · 2 měsíce zpět, 10 dopředu</div></div>
       <div class="legend"><span><i style="background:#a59fc9"></i>proplaceno</span><span><i style="background:#5eead4;border-color:#5eead4"></i>lze fakturovat</span><span><i style="box-shadow:inset 0 0 0 3px #a59fc9"></i>vyfakturováno</span><span><i style="border-style:dashed"></i>čeká</span></div></div>
     <div class="tlwrap"><div class="tl">${ticks}${lanes}<div class="today" style="left:calc(92px + (100% - 92px) * ${pos(T) / 100})"><b>DNES</b></div></div></div>
     <div class="meta">Ťukni na bod: otevře se případ. Splátky bez data (čekají na podmínku) najdeš v Případech.</div>
