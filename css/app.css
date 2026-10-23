@@ -202,3 +202,8 @@ a{color:var(--mint)}
 .chim{border-style:dashed;border-color:#4a3d86}
 .chim .outl b{color:#c49bff}
 .si-e{display:inline-block;width:auto;height:auto;line-height:1;vertical-align:-3px;filter:none}
+.tblwrap{overflow-x:auto;margin-top:12px}
+.stt{width:100%;border-collapse:collapse;font-size:13px;min-width:520px}
+.stt th,.stt td{padding:8px 6px;text-align:right;border-bottom:1px solid rgba(165,159,201,.15);white-space:nowrap}
+.stt th:first-child,.stt td:first-child{text-align:left}
+.stt th{font:600 11px 'JetBrains Mono',monospace;letter-spacing:.04em;text-transform:uppercase}
