@@ -5,9 +5,13 @@ export const SOURCES = {
   'Pro-Factor': { key: 'pf', name: 'Pro-Factor', color: '#f5b84a', trigger: 'uzavření města', icon: 'profactor' },
   'GOORN':      { key: 'go', name: 'GOORN',      color: '#4ade9b', trigger: 'instalace přístroje', icon: 'goorn' },
   'Domoveo.cz': { key: 'dm', name: 'Domoveo',    color: '#6ea8ff', trigger: 'podpis objednávky', icon: 'domoveo' },
-  'Grafika':    { key: 'gr', name: 'Grafika',    color: '#c49bff', trigger: 'zakázka', icon: 'grafika' }
+  'Grafika':    { key: 'gr', name: 'Grafika',    color: '#c49bff', trigger: 'zakázka', icon: 'grafika' },
+  'Krypto':     { key: 'kr', name: 'Krypto',     color: '#f7931a', trigger: 'výběr do Kč', icon: 'krypto' },
+  'Hravé dřevo':{ key: 'hd', name: 'Hravé dřevo', color: '#d9a066', trigger: 'marže M&M', emoji: '🪵', history: true }
 };
-export const SOURCE_ORDER = ['Pro-Factor', 'GOORN', 'Domoveo.cz', 'Grafika'];
+export const SOURCE_ORDER = ['Pro-Factor', 'GOORN', 'Domoveo.cz', 'Grafika', 'Krypto', 'Hravé dřevo'];
+// Zdroje, které jdou zadat ručně (Hravé dřevo je jen historie – Myrda 23. 10. 2026).
+export const ADD_SOURCES = SOURCE_ORDER.filter(s => !SOURCES[s].history);
 
 // GOORN – pevné částky (rozhodl Myrda 5. 10. a 12. 10. 2026).
 export const GOORN_PART1_MINOR = 319000;
@@ -111,6 +115,11 @@ export function buildInstallments(input) {
       if (!(dm.priceNetMinor > 0)) throw new Error('Zadej cenu zakázky bez DPH');
       parts = [{ ...base, label: 'Provize ' + rate + ' %', amountMinor: Math.round(dm.priceNetMinor * rate / 100), claimDate: null, blockingCondition: COND_DOMOVEO }];
     }
+  } else if (source === 'Krypto' || source === 'Hravé dřevo') {
+    // výběr z krypta / marže M&M = peníze už jsou na účtu: rovnou proplaceno (Myrda 23. 10. 2026)
+    const total = input.totalMinor;
+    if (!(total > 0)) throw new Error('Zadej částku v Kč');
+    parts = [{ ...base, label: source === 'Krypto' ? 'Výběr do Kč' : 'Marže M&M', amountMinor: total, claimDate: triggerDate, conditionSatisfiedDate: triggerDate, invoicedAt: triggerDate, paidAt: triggerDate }];
   } else {
     const total = input.totalMinor;
     if (!(total > 0)) throw new Error('Zadej částku');

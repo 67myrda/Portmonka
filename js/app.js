@@ -1,6 +1,6 @@
 // Portmonka 08 – UI nad deterministickým jádrem (core.js) a datovou vrstvou (store.js).
-import * as C from './core.js?v=8.2';
-import { createFirestoreStore, createMemoryStore } from './store.js?v=8.2';
+import * as C from './core.js?v=8.3';
+import { createFirestoreStore, createMemoryStore } from './store.js?v=8.3';
 
 const DEMO = new URLSearchParams(location.search).has('demo');
 const S = { tab: 'ted', user: null, cases: [], offers: null, loaded: false, filter: 'all', q: '', open: null, incMode: 'month', sel: new Set(), showWhy: false, busy: false, err: null };
@@ -20,8 +20,8 @@ const ICON = {
   reload: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>'
 };
 const MARK = '<svg class="mark" viewBox="0 0 40 40" aria-hidden="true"><rect x="3" y="11" width="34" height="24" rx="8" fill="none" stroke="#5eead4" stroke-width="3"></rect><path d="M11 11 C11 4 29 4 29 11" fill="none" stroke="#b493ff" stroke-width="3" stroke-linecap="round"></path><circle cx="20" cy="23" r="4" fill="#5eead4"></circle><circle cx="31" cy="6" r="2" fill="#f5b84a"></circle></svg>';
-const ELF = (pose = 'klid', size = 96) => `<img class="elfimg" src="img/elf/${pose}.webp?v=8.2" alt="Skřítek Portmonky" width="${size}" height="${size}" loading="lazy">`;
-const SI = (s, sz = 22) => SRC(s).icon ? `<img class="si" src="img/src/${SRC(s).icon}.webp?v=8.2" alt="" width="${sz}" height="${sz}" loading="lazy">` : '';
+const ELF = (pose = 'klid', size = 96) => `<img class="elfimg" src="img/elf/${pose}.webp?v=8.3" alt="Skřítek Portmonky" width="${size}" height="${size}" loading="lazy">`;
+const SI = (s, sz = 22) => SRC(s).icon ? `<img class="si" src="img/src/${SRC(s).icon}.webp?v=8.3" alt="" width="${sz}" height="${sz}" loading="lazy">` : SRC(s).emoji ? `<span class="si si-e" style="font-size:${Math.round(sz * .8)}px" aria-hidden="true">${SRC(s).emoji}</span>` : '';
 
 function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 2600); }
 
@@ -48,7 +48,7 @@ function header() {
   const tf = [['ted', 'Teď'], ['prijem', 'Příjem'], ['pripady', 'Případy'], ['souhrn', 'Souhrn']];
   const tx = [['cas', 'Čas'], ['obj', 'Objevitel'], ['lab', 'Laboratoř']];
   return `<header class="top"><div class="top-in">
-    <div class="brand"><img class="logo" src="img/logo-96.webp?v=8.2" alt="" width="44" height="44"><div><b class="wm">Portmonka</b><small>zvědavý účetní skřítek</small></div></div>
+    <div class="brand"><img class="logo" src="img/logo-96.webp?v=8.3" alt="" width="44" height="44"><div><b class="wm">Portmonka</b><small>zvědavý účetní skřítek</small></div></div>
     <nav class="nav" aria-label="Pohledy"><span class="grp">Finance</span>${tf.map(t => `<button type="button" class="tab${S.tab === t[0] ? ' on' : ''}" data-a="tab" data-t="${t[0]}">${t[1]}</button>`).join('')}
       <span class="grp">Objevování</span>${tx.map(t => `<button type="button" class="tab x${S.tab === t[0] ? ' on' : ''}" data-a="tab" data-t="${t[0]}">${t[1]}</button>`).join('')}</nav>
     <div class="user">${DEMO ? '<span class="demo">UKÁZKOVÁ DATA</span>' : ''}
@@ -60,7 +60,7 @@ function header() {
 function render() {
   const app = $('#app');
   if (!S.user) {
-    app.innerHTML = `<div class="wrap"><section class="login card"><img class="logo big" src="img/logo-96.webp?v=8.2" alt="Logo Portmonky" width="96" height="96">
+    app.innerHTML = `<div class="wrap"><section class="login card"><img class="logo big" src="img/logo-96.webp?v=8.3" alt="Logo Portmonky" width="96" height="96">
       <h1 class="wm">Portmonka</h1><p>Zvědavý účetní skřítek. Přihlas se přes Google, data se ukládají do tvého zabezpečeného prostoru ve Firestore.</p>
       <div class="btns" style="justify-content:center;margin-top:18px"><button type="button" class="btn solid" data-a="login">Přihlásit přes Google</button>
       <a class="btn ghost" href="?demo=1" style="text-decoration:none;display:inline-flex;align-items:center">Prohlédnout s ukázkovými daty</a></div></section></div>`;
@@ -144,7 +144,8 @@ function timeline(I, T) {
   const t0 = C.addDays(T, -60), t1 = C.addDays(T, 300), span = C.diffDays(t0, t1);
   const pos = d => Math.max(0, Math.min(100, C.diffDays(t0, d) / span * 100));
   const ticks = []; for (let k = 0; k < 13; k++) { const s = C.addMonths(C.startOfMonth(t0), k); if (s >= t0 && s <= t1) ticks.push(`<div class="tick" style="left:calc(92px + (100% - 92px) * ${pos(s) / 100})"><span>${C.monShort(s)}</span></div>`); }
-  const lanes = C.SOURCE_ORDER.map((s, li) => {
+  const shown = C.SOURCE_ORDER.filter((s, k) => k < 4 || I.some(i => i.source === s && i.st !== 'LOST' && [i.paidAt, i.invoicedAt, i.claimDate].some(d => C.isIso(d) && d >= t0 && d <= t1)));
+  const lanes = shown.map((s, li) => {
     const pts = I.filter(i => i.source === s && i.st !== 'LOST').map(i => {
       const d = i.st === 'PAID' ? i.paidAt : i.st === 'INVOICED' ? i.invoicedAt : i.st === 'READY' ? T : i.claimDate;
       if (!C.isIso(d) || d < t0 || d > t1) return '';
@@ -156,7 +157,7 @@ function timeline(I, T) {
   return `<section class="card">
     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap"><div><div class="k">Živá časová osa</div><div style="font-weight:700;margin-top:2px">Kam peníze putují · 2 měsíce zpět, 10 dopředu</div></div>
       <div class="legend"><span><i style="background:#a59fc9"></i>proplaceno</span><span><i style="background:#5eead4;border-color:#5eead4"></i>lze fakturovat</span><span><i style="box-shadow:inset 0 0 0 3px #a59fc9"></i>vyfakturováno</span><span><i style="border-style:dashed"></i>čeká</span></div></div>
-    <div class="tlwrap"><div class="tl">${ticks}${lanes}<div class="today" style="left:calc(92px + (100% - 92px) * ${pos(T) / 100})"><b>DNES</b></div></div></div>
+    <div class="tlwrap"><div class="tl" style="height:${38 + shown.length * 52}px">${ticks}${lanes}<div class="today" style="left:calc(92px + (100% - 92px) * ${pos(T) / 100})"><b>DNES</b></div></div></div>
     <div class="meta">Ťukni na bod: otevře se případ. Splátky bez data (čekají na podmínku) najdeš v Případech.</div>
     <div style="margin-top:14px"><span class="flag">ODHAD · NE GARANCE</span> <span class="meta">Kolik by mělo přijít na účet (pravidlo: fakturace do 3 dnů od nároku, platba do 3 dnů po faktuře)</span></div>
     <div class="pred">${[7, 30, 90].map(n => `<div><span>do ${n} dní</span><b>${K(C.forecast(I, T, n))}</b></div>`).join('')}</div>
@@ -251,8 +252,8 @@ function viewSouhrn(I) {
   const T = today(), t = C.totals(I, T), all = Math.max(1, t.total);
   const parts = [['PAID', 'Proplaceno', 'skutečně na účtu'], ['INVOICED', 'Na cestě', 'vyfakturováno, čeká na platbu'], ['READY', 'K akci', 'lze fakturovat hned'], ['WAITING', 'Čeká', 'budoucí nároky a podmínky'], ['LOST', 'Propadlo', 'nepočítá se do „zbývá“']];
   let acc = 0; const stops = parts.map(p => { const a = acc; acc += t[p[0]] / all * 360; return `${C.ST_COLOR[p[0]]} ${a}deg ${acc}deg`; }).join(',');
-  const src = C.bySource(I, T);
-  const planets = src.map((s, pi) => { const sz = Math.round(14 + Math.sqrt(s.total / 100) / 9), inset = [0, 7, 3, 10][pi]; return `<div class="orbit" style="inset:${inset}%;border-color:transparent;animation:${pi % 2 ? 'spinr' : 'spin'} ${38 + pi * 14}s linear infinite;animation-delay:-${pi * 7}s"><div class="planet" style="width:${sz}px;height:${sz}px;background:${SRC(s.source).color};color:${SRC(s.source).color}"><span>${SRC(s.source).name}</span></div></div>`; }).join('');
+  const src = C.bySource(I, T).filter((s, k) => k < 4 || s.total > 0);
+  const planets = src.map((s, pi) => { const sz = Math.round(14 + Math.sqrt(s.total / 100) / 9), inset = [0, 7, 3, 10, 5, 9][pi] ?? 6; return `<div class="orbit" style="inset:${inset}%;border-color:transparent;animation:${pi % 2 ? 'spinr' : 'spin'} ${38 + pi * 14}s linear infinite;animation-delay:-${pi * 7}s"><div class="planet" style="width:${sz}px;height:${sz}px;background:${SRC(s.source).color};color:${SRC(s.source).color}"><span>${SRC(s.source).name}</span></div></div>`; }).join('');
   return `<div class="grid g2" style="align-items:center">
   <section class="card"><div class="k">Stav vesmíru</div>
     <div class="uni" style="margin-top:10px"><div class="orbit" style="inset:4%"></div><div class="orbit" style="inset:12%"></div>${planets}
@@ -299,7 +300,7 @@ const radio = (f, n) => f.querySelector(`[name="${n}"]:checked`)?.value ?? '';
 function openAdd() {
   const T = today();
   const f = modal('Přidat případ', 'Nový záznam', `
-    <label class="f">Zdroj<select name="source">${C.SOURCE_ORDER.map(s => `<option value="${s}">${SRC(s).name}</option>`).join('')}</select></label>
+    <label class="f">Zdroj<select name="source">${C.ADD_SOURCES.map(s => `<option value="${s}">${SRC(s).name}</option>`).join('')}</select></label>
     <div data-dyn></div>
     <label class="f">Poznámka (nepovinné)<textarea name="note" placeholder="cokoliv, co chceš u případu vidět"></textarea></label>
     <div class="help" data-prev></div>`, async form => {
@@ -324,7 +325,9 @@ function openAdd() {
         : `<label class="f">Klient, obec<input name="title" required placeholder="např. Mačková, Trutnov"></label>
           <div class="f2"><label class="f">Datum podpisu objednávky<input name="trig" type="date" value="${T}"></label><label class="f">Sazba<select name="rate"><option value="17">17 % · firemní zakázka</option><option value="25">25 % · vlastní klient</option></select></label></div>
           <div class="f2"><label class="f">Cena zakázky bez DPH (Kč)<input name="net" inputmode="decimal" placeholder="např. 3 521"></label><label class="f">ID zakázky Domovea (nepovinné)<input name="ext" placeholder="např. 1234"></label></div>`);
-    } else h = `<label class="f">Zakázka<input name="title" required placeholder="např. A5 leták"></label>
+    } else if (s === 'Krypto') h = `<label class="f">Označení<input name="title" required placeholder="např. Výběr BTC → Kč"></label>
+      <div class="f2"><label class="f">Datum výběru na účet<input name="trig" type="date" value="${T}"></label><label class="f">Přišlo na účet (Kč)<input name="total" inputmode="decimal" placeholder="např. 13 630"></label></div>`;
+    else h = `<label class="f">Zakázka<input name="title" required placeholder="např. A5 leták"></label>
       <div class="f2"><label class="f">Datum zakázky<input name="trig" type="date" value="${T}"></label><label class="f">Částka (Kč)<input name="total" inputmode="decimal" placeholder="např. 8 500"></label></div>`;
     const keep = {}; dyn.querySelectorAll('input,select').forEach(x => { if (x.type !== 'radio' && x.type !== 'checkbox' && x.value) keep[x.name] = x.value; });
     dyn.innerHTML = h;
@@ -342,13 +345,13 @@ function openAdd() {
 }
 function rulesHelp(s) {
   return { 'Pro-Factor': 'Pro-Factor: 75 % při uzavření města, 25 % po 4 měsících.', 'GOORN': 'GOORN: 3 190 Kč po instalaci, 2 530 Kč po splnění podmínky (datum se doplní, až nastane).',
-    'Domoveo.cz': 'Domoveo: 17 % (firemní) / 25 % (vlastní klient) z ceny bez DPH. Nárok vzniká až po servisu.', 'Grafika': 'Grafika: jednorázová zakázka.' }[s] || '';
+    'Domoveo.cz': 'Domoveo: 17 % (firemní) / 25 % (vlastní klient) z ceny bez DPH. Nárok vzniká až po servisu.', 'Grafika': 'Grafika: jednorázová zakázka.', 'Krypto': 'Krypto: výběr do Kč = příjem, zapíše se rovnou jako proplacený. Částku z USD přepočti kurzem dne.' }[s] || '';
 }
 function readAdd(f, quiet) {
   const source = val(f, 'source'), trig = val(f, 'trig'), note = val(f, 'note');
   const input = { source, triggerDate: trig };
   let title = val(f, 'title'), kind = 'case', extra = {};
-  if (source === 'Pro-Factor' || source === 'Grafika') input.totalMinor = C.toMinor(val(f, 'total'));
+  if (['Pro-Factor', 'Grafika', 'Krypto', 'Hravé dřevo'].includes(source)) input.totalMinor = C.toMinor(val(f, 'total'));
   if (source === 'GOORN' && chk(f, 'ex')) input.goorn = { p1Minor: C.toMinor(val(f, 'p1')), p2Minor: C.toMinor(val(f, 'p2')) };
   if (source === 'Domoveo.cz') {
     if (radio(f, 'dmk') === 'bonus') {
