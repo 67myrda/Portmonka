@@ -117,3 +117,14 @@ test('datumy a formáty', () => {
   assert.equal(C.toMinor('3 190'), 319000);
   assert.equal(C.toMinor('12,5'), 1250);
 });
+
+test('Skřítek: chiméra nabídek → Co kdyby…, nikdy v součtech', () => {
+  const offers = { sazbaPct: 17, dphPct: 12, uspesnostPct: 20, celkemMinor: 3138900, realneMinor: 627800,
+    polozky: [{ klient: 'Tejchmanová', obec: 'Trutnov', zakladKc: 171463, provizeMinor: 2914900 }] };
+  const e = C.skritek([], '2026-10-23', offers);
+  assert.equal(e.pose, 'napad');
+  assert.match(e.title, /31 389 Kč/);
+  assert.match(e.short, /20 %.*6 278 Kč/);
+  assert.equal(C.skritek([], '2026-10-23', null), null);
+  assert.equal(C.totals([], '2026-10-23').WAITING, 0);
+});

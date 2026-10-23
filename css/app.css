@@ -199,3 +199,5 @@ a{color:var(--mint)}
 .empty{padding:22px;text-align:center;color:var(--mu);border:1px dashed var(--ln);border-radius:14px}
 @media (max-width:620px){.nav .grp{display:none}.brand small{display:none}.pred{grid-template-columns:1fr}.metric .v{font-size:21px}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.chim{border-style:dashed;border-color:#4a3d86}
+.chim .outl b{color:#c49bff}

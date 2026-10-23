@@ -201,7 +201,7 @@ export function outlook(items, today, months = 6) {
 }
 
 /* ---------- Skřítek: jeden deterministický postřeh (vzácně, s důkazy) ---------- */
-export function skritek(items, today) {
+export function skritek(items, today, offers = null) {
   const S = withStatus(items, today);
   const inv = S.filter(i => i.st === ST.INVOICED).map(i => ({ ...i, age: diffDays(i.invoicedAt, today) })).sort((a, b) => b.age - a.age);
   if (inv[0] && inv[0].age >= 7) {
@@ -218,6 +218,14 @@ export function skritek(items, today) {
   if (lost.length) {
     return { pose: 'smutny', cat: 'Smutná zpráva', title: 'Propadlo ' + fmtKc(sumMinor(lost)) + '.', short: 'Stává se. Čísla jsou poctivá i v tom, co nevyšlo.',
       evidence: lost.slice(0, 5).map(i => i.title + ': ' + fmtKc(i.amountMinor) + ' · ' + fmtDate(i.lostAt) + (i.lostReason ? ' · ' + i.lostReason : '') + ' (fakt)'), kind: 'fact' };
+  }
+  const of = offers && Array.isArray(offers.polozky) ? offers.polozky : [];
+  if (of.length) {
+    const n = of.length, u = offers.uspesnostPct;
+    return { pose: 'napad', cat: 'Co kdyby…', title: 'Kdyby ' + (n === 1 ? 'klient přijal nabídku' : 'všech ' + n + ' klientů přijalo nabídku') + ', přibylo by ' + fmtKc(offers.celkemMinor) + ' provize.',
+      short: (u != null && offers.realneMinor != null ? 'Při tvé úspěšnosti ' + u + ' % je reálné asi ' + fmtKc(offers.realneMinor) + '. ' : '') + 'Zatím je to chiméra, ne nárok.',
+      evidence: [...of.slice(0, 6).map(p => p.klient + (p.obec ? ', ' + p.obec : '') + ': nabídka ' + fmtKc(p.zakladKc * 100) + ' bez DPH → ' + (offers.sazbaPct || 17) + ' % = ' + fmtKc(p.provizeMinor) + ' (hypotéza)'),
+        'základ = částka s DPH ÷ ' + (1 + (offers.dphPct || 12) / 100).toFixed(2).replace('.', ',') + ' (odhad DPH ' + (offers.dphPct || 12) + ' %)'], kind: 'hyp' };
   }
   const pf = S.filter(i => i.source === 'Pro-Factor' && i.st === ST.WAITING && isIso(i.claimDate));
   if (pf.length >= 2) {

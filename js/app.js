@@ -3,7 +3,7 @@ import * as C from './core.js?v=8.2';
 import { createFirestoreStore, createMemoryStore } from './store.js?v=8.2';
 
 const DEMO = new URLSearchParams(location.search).has('demo');
-const S = { tab: 'ted', user: null, cases: [], loaded: false, filter: 'all', q: '', open: null, incMode: 'month', sel: new Set(), showWhy: false, busy: false, err: null };
+const S = { tab: 'ted', user: null, cases: [], offers: null, loaded: false, filter: 'all', q: '', open: null, incMode: 'month', sel: new Set(), showWhy: false, busy: false, err: null };
 let store = null;
 
 const $ = s => document.querySelector(s);
@@ -30,7 +30,7 @@ function items() { return C.withStatus(C.flatten(S.cases), today()); }
 function caseById(id) { return S.cases.find(c => c.id === id); }
 function instById(cid, iid) { return caseById(cid)?.installments.find(i => i.id === iid); }
 async function reload() {
-  try { const r = await store.load(); S.cases = r.cases; S.loaded = true; S.err = null; }
+  try { const r = await store.load(); S.cases = r.cases; S.offers = r.offers || null; S.loaded = true; S.err = null; }
   catch (e) { console.error(e); S.err = 'Data se nepodařilo načíst: ' + (e.code || e.message); }
   render();
   const bad = S.cases.filter(c => !C.integrity(c));
@@ -88,7 +88,7 @@ function viewTed(I) {
   const wait = I.filter(i => i.st === 'WAITING');
   const tot = C.totals(I, T);
   const inc = C.income(I, 'month', T);
-  const elf = C.skritek(I, T);
+  const elf = C.skritek(I, T, S.offers);
   // na cestě – seskupit podle faktury
   const groups = {}; for (const i of inv) { const k = i.invoiceId || ('solo:' + i.caseId + i.id); (groups[k] = groups[k] || []).push(i); }
   const gl = Object.entries(groups).map(([k, xs]) => ({ k, xs, no: xs[0].invoiceNo, at: xs[0].invoicedAt, sum: C.sumMinor(xs) })).sort((a, b) => a.at.localeCompare(b.at));
@@ -125,10 +125,20 @@ function viewTed(I) {
     ${gl.map(g => `<div class="row"><div class="l"><b>${g.no ? 'Faktura ' + esc(g.no) : esc(SRC(g.xs[0].source).name + ' · ' + g.xs[0].title)}</b><span>${g.xs.length > 1 || g.no ? g.xs.map(x => esc(x.title)).join(', ') + ' · ' : esc(g.xs[0].label) + ' · '}vyfakturováno ${C.fmtDateShort(g.at)} (${C.diffDays(g.at, T)} dní${C.diffDays(g.at, T) > C.FORECAST_RULE.payAfterInvoice ? ' · <b style="color:#ff7a6b;display:inline">po termínu platby</b>' : ''})</span></div>
       <span class="mono">${K(g.sum)}</span><button type="button" class="btn" data-a="pay-group" data-k="${esc(g.k)}">Přišlo na účet</button></div>`).join('')}</section>` : ''}
   ${timeline(I, T)}
+  ${viewOffers(S.offers)}
   <section class="card"><div class="k">Výhled nároků · další měsíce</div>
     <div class="outl">${C.outlook(I, T).map(o => `<div><span class="meta">${o.label}</span><b>${K(o.total)}</b><span class="meta">${o.count} ${plural(o.count, 'splátka', 'splátky', 'splátek')}</span></div>`).join('')}</div>
     ${wait.some(C.isBlocked) ? `<div class="meta" style="margin-top:10px">K tomu čeká na podmínku ${K(C.sumMinor(wait.filter(C.isBlocked)))} (2. části GOORN, servis Domovea). Datum zatím neznáme, proto nejsou ve výhledu.</div>` : ''}
   </section></div>`;
+}
+function viewOffers(o) {
+  const ps = o && Array.isArray(o.polozky) ? o.polozky : [];
+  if (!ps.length) return '';
+  return `<section class="card chim"><div class="k">Co kdyby… · rozpracované nabídky Domovea</div>
+    <div class="outl"><div><span class="meta">kdyby přijali všichni</span><b>${K(o.celkemMinor)}</b><span class="meta">${ps.length} ${plural(ps.length, 'nabídka', 'nabídky', 'nabídek')} · ${o.sazbaPct || 17} %</span></div>
+      ${o.realneMinor != null ? `<div><span class="meta">reálně (úspěšnost ${o.uspesnostPct} %)</span><b>${K(o.realneMinor)}</b><span class="meta">odhad, ne nárok</span></div>` : ''}</div>
+    ${ps.map(p => `<div class="row"><div class="l"><b>${SI('Domoveo.cz', 20)}${esc(p.klient)}${p.obec ? ', ' + esc(p.obec) : ''}</b><span>nabídka ${K(p.zakladKc * 100)} bez DPH${p.schuzka ? ' · schůzka ' + C.fmtDateShort(p.schuzka) : ''} · čeká na odsouhlasení</span></div><span class="mono">${K(p.provizeMinor)}</span></div>`).join('')}
+    <div class="meta" style="margin-top:10px">Chiméra: ${o.sazbaPct || 17} % ze základu bez DPH (DPH ${o.dphPct || 12} % je odhad). Nepočítá se do nároků ani součtů. Aktualizace každý večer z Domovea.</div></section>`;
 }
 function timeline(I, T) {
   const t0 = C.addDays(T, -60), t1 = C.addDays(T, 300), span = C.diffDays(t0, t1);
