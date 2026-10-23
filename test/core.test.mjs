@@ -12,6 +12,8 @@ test('Pro-Factor 75/25, +4 měsíce, součet sedí', () => {
   assert.equal(r.totalAmountMinor, 2500000);
   const odd = C.buildInstallments({ source: 'Pro-Factor', triggerDate: '2026-10-01', totalMinor: 100001 });
   assert.equal(C.sumMinor(odd.installments), 100001);
+  const ry = C.buildInstallments({ source: 'Pro-Factor', triggerDate: '2026-09-10', totalMinor: 9171800 });
+  assert.deepEqual(ry.installments.map(i => i.amountMinor), [6878900, 2292900]); // celé koruny
 });
 
 test('GOORN pevné částky 3 190 + 2 530, 2. část blokovaná podmínkou', () => {
@@ -114,4 +116,15 @@ test('datumy a formáty', () => {
   assert.equal(C.fmtKc(1234567), '12 346 Kč');
   assert.equal(C.toMinor('3 190'), 319000);
   assert.equal(C.toMinor('12,5'), 1250);
+});
+
+test('Skřítek: chiméra nabídek → Co kdyby…, nikdy v součtech', () => {
+  const offers = { sazbaPct: 17, dphPct: 12, uspesnostPct: 20, celkemMinor: 3138900, realneMinor: 627800,
+    polozky: [{ klient: 'Tejchmanová', obec: 'Trutnov', zakladKc: 171463, provizeMinor: 2914900 }] };
+  const e = C.skritek([], '2026-10-23', offers);
+  assert.equal(e.pose, 'napad');
+  assert.match(e.title, /31 389 Kč/);
+  assert.match(e.short, /20 %.*6 278 Kč/);
+  assert.equal(C.skritek([], '2026-10-23', null), null);
+  assert.equal(C.totals([], '2026-10-23').WAITING, 0);
 });

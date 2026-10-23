@@ -1,9 +1,9 @@
 // Portmonka 08 – UI nad deterministickým jádrem (core.js) a datovou vrstvou (store.js).
-import * as C from './core.js?v=8.1';
-import { createFirestoreStore, createMemoryStore } from './store.js?v=8.1';
+import * as C from './core.js?v=8.2';
+import { createFirestoreStore, createMemoryStore } from './store.js?v=8.2';
 
 const DEMO = new URLSearchParams(location.search).has('demo');
-const S = { tab: 'ted', user: null, cases: [], loaded: false, filter: 'all', q: '', open: null, incMode: 'month', sel: new Set(), showWhy: false, busy: false, err: null };
+const S = { tab: 'ted', user: null, cases: [], offers: null, loaded: false, filter: 'all', q: '', open: null, incMode: 'month', sel: new Set(), showWhy: false, busy: false, err: null };
 let store = null;
 
 const $ = s => document.querySelector(s);
@@ -20,7 +20,8 @@ const ICON = {
   reload: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>'
 };
 const MARK = '<svg class="mark" viewBox="0 0 40 40" aria-hidden="true"><rect x="3" y="11" width="34" height="24" rx="8" fill="none" stroke="#5eead4" stroke-width="3"></rect><path d="M11 11 C11 4 29 4 29 11" fill="none" stroke="#b493ff" stroke-width="3" stroke-linecap="round"></path><circle cx="20" cy="23" r="4" fill="#5eead4"></circle><circle cx="31" cy="6" r="2" fill="#f5b84a"></circle></svg>';
-const ELF = '<svg viewBox="0 0 86 96" role="img" aria-label="Skřítek Portmonky"><line x1="43" y1="14" x2="43" y2="4" stroke="#b493ff" stroke-width="3" stroke-linecap="round"></line><circle cx="43" cy="4" r="4" fill="#f5b84a"></circle><path d="M14 52 C14 26 72 26 72 52 L72 70 C72 84 14 84 14 70 Z" fill="#1d1938" stroke="#5eead4" stroke-width="3"></path><ellipse class="eye" cx="32" cy="50" rx="6" ry="7" fill="#f1eefe"></ellipse><ellipse class="eye" cx="54" cy="50" rx="6" ry="7" fill="#f1eefe"></ellipse><circle cx="33" cy="51" r="3" fill="#0c0a1d"></circle><circle cx="55" cy="51" r="3" fill="#0c0a1d"></circle><path d="M36 66 Q43 71 50 66" fill="none" stroke="#5eead4" stroke-width="2.5" stroke-linecap="round"></path><path d="M14 60 L4 54" stroke="#5eead4" stroke-width="3" stroke-linecap="round"></path><path d="M72 60 L82 52" stroke="#5eead4" stroke-width="3" stroke-linecap="round"></path><rect x="30" y="80" width="26" height="10" rx="4" fill="#f5b84a"></rect></svg>';
+const ELF = (pose = 'klid', size = 96) => `<img class="elfimg" src="img/elf/${pose}.webp?v=8.2" alt="Skřítek Portmonky" width="${size}" height="${size}" loading="lazy">`;
+const SI = (s, sz = 22) => SRC(s).icon ? `<img class="si" src="img/src/${SRC(s).icon}.webp?v=8.2" alt="" width="${sz}" height="${sz}" loading="lazy">` : '';
 
 function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 2600); }
 
@@ -29,7 +30,7 @@ function items() { return C.withStatus(C.flatten(S.cases), today()); }
 function caseById(id) { return S.cases.find(c => c.id === id); }
 function instById(cid, iid) { return caseById(cid)?.installments.find(i => i.id === iid); }
 async function reload() {
-  try { const r = await store.load(); S.cases = r.cases; S.loaded = true; S.err = null; }
+  try { const r = await store.load(); S.cases = r.cases; S.offers = r.offers || null; S.loaded = true; S.err = null; }
   catch (e) { console.error(e); S.err = 'Data se nepodařilo načíst: ' + (e.code || e.message); }
   render();
   const bad = S.cases.filter(c => !C.integrity(c));
@@ -47,7 +48,7 @@ function header() {
   const tf = [['ted', 'Teď'], ['prijem', 'Příjem'], ['pripady', 'Případy'], ['souhrn', 'Souhrn']];
   const tx = [['cas', 'Čas'], ['obj', 'Objevitel'], ['lab', 'Laboratoř']];
   return `<header class="top"><div class="top-in">
-    <div class="brand"><img class="logo" src="img/logo-96.webp?v=8.1" alt="" width="44" height="44"><div><b class="wm">Portmonka</b><small>zvědavý účetní skřítek</small></div></div>
+    <div class="brand"><img class="logo" src="img/logo-96.webp?v=8.2" alt="" width="44" height="44"><div><b class="wm">Portmonka</b><small>zvědavý účetní skřítek</small></div></div>
     <nav class="nav" aria-label="Pohledy"><span class="grp">Finance</span>${tf.map(t => `<button type="button" class="tab${S.tab === t[0] ? ' on' : ''}" data-a="tab" data-t="${t[0]}">${t[1]}</button>`).join('')}
       <span class="grp">Objevování</span>${tx.map(t => `<button type="button" class="tab x${S.tab === t[0] ? ' on' : ''}" data-a="tab" data-t="${t[0]}">${t[1]}</button>`).join('')}</nav>
     <div class="user">${DEMO ? '<span class="demo">UKÁZKOVÁ DATA</span>' : ''}
@@ -59,7 +60,7 @@ function header() {
 function render() {
   const app = $('#app');
   if (!S.user) {
-    app.innerHTML = `<div class="wrap"><section class="login card"><img class="logo big" src="img/logo-96.webp?v=8.1" alt="Logo Portmonky" width="96" height="96">
+    app.innerHTML = `<div class="wrap"><section class="login card"><img class="logo big" src="img/logo-96.webp?v=8.2" alt="Logo Portmonky" width="96" height="96">
       <h1 class="wm">Portmonka</h1><p>Zvědavý účetní skřítek. Přihlas se přes Google, data se ukládají do tvého zabezpečeného prostoru ve Firestore.</p>
       <div class="btns" style="justify-content:center;margin-top:18px"><button type="button" class="btn solid" data-a="login">Přihlásit přes Google</button>
       <a class="btn ghost" href="?demo=1" style="text-decoration:none;display:inline-flex;align-items:center">Prohlédnout s ukázkovými daty</a></div></section></div>`;
@@ -67,7 +68,7 @@ function render() {
   }
   const I = items();
   let body = '';
-  if (!S.loaded) body = `<div class="empty">Načítám…</div>`;
+  if (!S.loaded) body = `<div class="empty">${ELF('pracuje', 120)}<div>Načítám…</div></div>`;
   else if (S.tab === 'ted') body = viewTed(I);
   else if (S.tab === 'prijem') body = viewPrijem(I);
   else if (S.tab === 'pripady') body = viewPripady(I);
@@ -87,7 +88,7 @@ function viewTed(I) {
   const wait = I.filter(i => i.st === 'WAITING');
   const tot = C.totals(I, T);
   const inc = C.income(I, 'month', T);
-  const elf = C.skritek(I, T);
+  const elf = C.skritek(I, T, S.offers);
   // na cestě – seskupit podle faktury
   const groups = {}; for (const i of inv) { const k = i.invoiceId || ('solo:' + i.caseId + i.id); (groups[k] = groups[k] || []).push(i); }
   const gl = Object.entries(groups).map(([k, xs]) => ({ k, xs, no: xs[0].invoiceNo, at: xs[0].invoicedAt, sum: C.sumMinor(xs) })).sort((a, b) => a.at.localeCompare(b.at));
@@ -104,7 +105,7 @@ function viewTed(I) {
       <div class="big">${K(readySum)}</div>
       <p>můžeš vyfakturovat hned teď · ${ready.length} ${plural(ready.length, 'položka čeká', 'položky čekají', 'položek čeká')} na tvůj krok</p>
       ${ready.map(i => `<div class="act"><input class="chk" type="checkbox" data-a="sel" data-c="${i.caseId}" data-i="${i.id}" aria-label="Vybrat ${esc(i.title)}" ${S.sel.has(i.caseId + '|' + i.id) ? 'checked' : ''}>
-        <span class="dot" style="background:${SRC(i.source).color}"></span>
+        ${SI(i.source, 32)}
         <div class="l" data-a="open" data-c="${i.caseId}"><b>${esc(SRC(i.source).name)} · ${esc(i.title)}</b><span>${esc(i.label)} · nárok od ${C.fmtDateShort(i.claimDate)}</span></div>
         <span class="amt">${K(i.amountMinor)}</span></div>`).join('')}
       ${ready.length ? `<div class="bulk"><button type="button" class="btn solid" data-a="inv-sel" ${selItems.length ? '' : 'disabled'}>Vyfakturovat vybrané${selItems.length ? ' · ' + selItems.length + ' · ' + K(C.sumMinor(selItems)) : ''}</button>
@@ -112,7 +113,7 @@ function viewTed(I) {
         : `<p style="margin-top:12px">Všechno vyfakturováno. Skřítek je spokojený.</p>`}
     </section>
     <section class="card"><div class="k">Portmonka si všimla</div>
-      <div class="elf" style="margin-top:12px">${ELF}<div class="bubble">
+      <div class="elf" style="margin-top:12px">${ELF(elf ? elf.pose : 'klid', 104)}<div class="bubble">
         ${elf ? `<span class="tagc">${esc(elf.cat)}</span><div class="hl">Hele… ${esc(elf.title)}</div><div class="meta">${esc(elf.short)}</div>
           <div class="btns"><button type="button" class="btn ghost" data-a="why">${S.showWhy ? 'Schovat důkazy' : 'Proč si to myslím?'}</button></div>
           ${S.showWhy ? `<ul class="ev">${elf.evidence.map(e => `<li>${esc(e)}</li>`).join('')}</ul><div class="meta" style="margin-top:6px">Fakt = spočítáno z dat · Hypotéza = stopa, ne jistota</div>` : ''}`
@@ -124,10 +125,20 @@ function viewTed(I) {
     ${gl.map(g => `<div class="row"><div class="l"><b>${g.no ? 'Faktura ' + esc(g.no) : esc(SRC(g.xs[0].source).name + ' · ' + g.xs[0].title)}</b><span>${g.xs.length > 1 || g.no ? g.xs.map(x => esc(x.title)).join(', ') + ' · ' : esc(g.xs[0].label) + ' · '}vyfakturováno ${C.fmtDateShort(g.at)} (${C.diffDays(g.at, T)} dní${C.diffDays(g.at, T) > C.FORECAST_RULE.payAfterInvoice ? ' · <b style="color:#ff7a6b;display:inline">po termínu platby</b>' : ''})</span></div>
       <span class="mono">${K(g.sum)}</span><button type="button" class="btn" data-a="pay-group" data-k="${esc(g.k)}">Přišlo na účet</button></div>`).join('')}</section>` : ''}
   ${timeline(I, T)}
+  ${viewOffers(S.offers)}
   <section class="card"><div class="k">Výhled nároků · další měsíce</div>
     <div class="outl">${C.outlook(I, T).map(o => `<div><span class="meta">${o.label}</span><b>${K(o.total)}</b><span class="meta">${o.count} ${plural(o.count, 'splátka', 'splátky', 'splátek')}</span></div>`).join('')}</div>
     ${wait.some(C.isBlocked) ? `<div class="meta" style="margin-top:10px">K tomu čeká na podmínku ${K(C.sumMinor(wait.filter(C.isBlocked)))} (2. části GOORN, servis Domovea). Datum zatím neznáme, proto nejsou ve výhledu.</div>` : ''}
   </section></div>`;
+}
+function viewOffers(o) {
+  const ps = o && Array.isArray(o.polozky) ? o.polozky : [];
+  if (!ps.length) return '';
+  return `<section class="card chim"><div class="k">Co kdyby… · rozpracované nabídky Domovea</div>
+    <div class="outl"><div><span class="meta">kdyby přijali všichni</span><b>${K(o.celkemMinor)}</b><span class="meta">${ps.length} ${plural(ps.length, 'nabídka', 'nabídky', 'nabídek')} · ${o.sazbaPct || 17} %</span></div>
+      ${o.realneMinor != null ? `<div><span class="meta">reálně (úspěšnost ${o.uspesnostPct} %)</span><b>${K(o.realneMinor)}</b><span class="meta">odhad, ne nárok</span></div>` : ''}</div>
+    ${ps.map(p => `<div class="row"><div class="l"><b>${SI('Domoveo.cz', 20)}${esc(p.klient)}${p.obec ? ', ' + esc(p.obec) : ''}</b><span>nabídka ${K(p.zakladKc * 100)} bez DPH${p.schuzka ? ' · schůzka ' + C.fmtDateShort(p.schuzka) : ''} · čeká na odsouhlasení</span></div><span class="mono">${K(p.provizeMinor)}</span></div>`).join('')}
+    <div class="meta" style="margin-top:10px">Chiméra: ${o.sazbaPct || 17} % ze základu bez DPH (DPH ${o.dphPct || 12} % je odhad). Nepočítá se do nároků ani součtů. Aktualizace každý večer z Domovea.</div></section>`;
 }
 function timeline(I, T) {
   const t0 = C.addDays(T, -60), t1 = C.addDays(T, 300), span = C.diffDays(t0, t1);
@@ -170,7 +181,7 @@ function viewPrijem(I) {
   </section>
   <section class="card"><div class="k">Odkud to přišlo · ${per}</div>
     <div class="share">${C.SOURCE_ORDER.map(s => `<i style="width:${cur.total ? cur.bySrc[s] / cur.total * 100 : 0}%;background:${SRC(s).color}"></i>`).join('')}</div>
-    ${C.SOURCE_ORDER.map(s => `<div class="row"><div class="l"><b style="color:${SRC(s).color}">${SRC(s).name}</b><span>${cur.total ? Math.round(cur.bySrc[s] / cur.total * 100) : 0} %</span></div><span class="mono">${K(cur.bySrc[s])}</span></div>`).join('')}
+    ${C.SOURCE_ORDER.map(s => `<div class="row"><div class="l"><b style="color:${SRC(s).color}">${SI(s, 22)}${SRC(s).name}</b><span>${cur.total ? Math.round(cur.bySrc[s] / cur.total * 100) : 0} %</span></div><span class="mono">${K(cur.bySrc[s])}</span></div>`).join('')}
     <div class="k" style="margin-top:18px">Poslední platby</div>
     ${recent.length ? recent.map(i => `<div class="row" data-a="open" data-c="${i.caseId}" style="cursor:pointer"><div class="l"><b>${esc(SRC(i.source).name + ' · ' + i.title)}</b><span>${esc(i.label)}${i.kind === 'bonus' ? ' · bonus' : ''} · ${C.fmtDateShort(i.paidAt)}</span></div><span class="mono" style="color:${SRC(i.source).color}">+ ${K(i.amountMinor)}</span></div>`).join('') : '<div class="empty">Zatím žádná proplacená splátka.</div>'}
   </section></div>`;
@@ -193,7 +204,7 @@ function viewPripady(I) {
   const cards = list.map(c => {
     const xs = (c.installments || []).map(i => ({ ...i, st: C.status(i, T) })), sts = xs.map(i => i.st);
     return `<button type="button" class="case${S.open === c.id ? ' on' : ''}${C.integrity(c) ? '' : ' bad'}" data-a="pick" data-c="${c.id}">
-      <span class="src" style="color:${SRC(c.source).color}">${SRC(c.source).name}${c.kind === 'bonus' ? ' · bonus' : ''}</span><span class="t">${esc(c.title)}</span>
+      <span class="src" style="color:${SRC(c.source).color}">${SI(c.source, 18)}${SRC(c.source).name}${c.kind === 'bonus' ? ' · bonus' : ''}</span><span class="t">${esc(c.title)}</span>
       <span class="mini">${sts.map(s => `<i style="background:${C.ST_COLOR[s]}"></i>`).join('')}</span>
       <span style="display:flex;justify-content:space-between;gap:8px"><span class="meta">${caseLead(sts)}</span><span class="mono">${K(C.sumMinor(xs))}</span></span></button>`;
   }).join('');
@@ -206,7 +217,7 @@ function viewPripady(I) {
 function detail(c, T) {
   const xs = (c.installments || []).map(i => ({ ...i, st: C.status(i, T) }));
   const ok = C.integrity(c);
-  return `<span class="src" style="color:${SRC(c.source).color}">${SRC(c.source).name}${c.kind === 'bonus' ? ' · bonus' : ''}</span>
+  return `<span class="src" style="color:${SRC(c.source).color}">${SI(c.source, 18)}${SRC(c.source).name}${c.kind === 'bonus' ? ' · bonus' : ''}</span>
     <h2 class="disp" style="margin:4px 0 2px;font-size:21px;font-weight:600">${esc(c.title)}</h2>
     <div class="meta">${SRC(c.source).trigger ? esc(SRC(c.source).trigger) + ' ' : ''}${C.fmtDate(c.triggerDate)} · celkem <span class="mono">${K(C.sumMinor(xs))}</span>${c.externalId ? ' · ID ' + esc(c.externalId) : ''}</div>
     ${c.note ? `<div class="help">${esc(c.note)}</div>` : ''}
@@ -253,14 +264,15 @@ function viewSouhrn(I) {
     <div class="row"><div class="l"><b>Zbývá</b><span>celkem − proplaceno − propadlo</span></div><span class="mono" style="color:#5eead4">${K(t.remaining)}</span></div>
     <div class="k" style="margin-top:18px">Podle zdroje</div>
     <div class="share">${src.map(s => `<i style="width:${s.total / all * 100}%;background:${SRC(s.source).color}"></i>`).join('')}</div>
-    ${src.map(s => `<div class="row"><div class="l"><b style="color:${SRC(s.source).color}">${SRC(s.source).name}</b><span>proplaceno ${K(s.PAID)} · zbývá ${K(s.remaining)}${s.LOST ? ' · propadlo ' + K(s.LOST) : ''}</span></div><span class="mono">${K(s.total)}</span></div>`).join('')}
+    ${src.map(s => `<div class="row"><div class="l"><b style="color:${SRC(s.source).color}">${SI(s.source, 22)}${SRC(s.source).name}</b><span>proplaceno ${K(s.PAID)} · zbývá ${K(s.remaining)}${s.LOST ? ' · propadlo ' + K(s.LOST) : ''}</span></div><span class="mono">${K(s.total)}</span></div>`).join('')}
   </section></div>`;
 }
 function viewSoon(tab) {
+  const pose = { cas: 'cas', obj: 'vzorec', lab: 'laborator' }[tab];
   const info = { cas: ['Časový stroj', 'Cestování penězi v čase nad tvými skutečnými daty (−2 týdny až +12 měsíců, scénáře ±30 dní).', 'fáze 4'],
     obj: ['Objevitel', 'Vzorce, anomálie a průsečíky z tvých dat. Každý objev ukáže, z čeho vznikl.', 'fáze 5'],
     lab: ['Laboratoř „Co kdyby…“', 'Realita vs. scénář: posuň platby, přidej instalace a sleduj, jak se mění časový prostor peněz.', 'fáze 6'] }[tab];
-  return `<section class="card"><div class="elf">${ELF}<div class="bubble"><span class="tagc">Připravuju · ${info[2]}</span><div class="hl">${info[0]}</div><div class="meta">${info[1]} Návrh vzhledu už máš schválený, teď nejdřív musí pevně stát finanční základ.</div></div></div></section>`;
+  return `<section class="card"><div class="elf">${ELF(pose, 140)}<div class="bubble"><span class="tagc">Připravuju · ${info[2]}</span><div class="hl">${info[0]}</div><div class="meta">${info[1]} Návrh vzhledu už máš schválený, teď nejdřív musí pevně stát finanční základ.</div></div></div></section>`;
 }
 
 /* ---------------- modály ---------------- */

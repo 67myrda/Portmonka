@@ -1,6 +1,6 @@
 // Datová vrstva Portmonky: Firestore (ostrý provoz) a paměťový režim (ukázková data, nic se neukládá).
 // Model: users/{uid}/cases/{caseId}/installments/{id} + users/{uid}/events/{id}
-import { buildInstallments, localToday, addDays, addMonths, GOORN_PART1_MINOR, GOORN_PART2_MINOR, COND_GOORN, COND_DOMOVEO } from './core.js?v=8.1';
+import { buildInstallments, localToday, addDays, addMonths, GOORN_PART1_MINOR, GOORN_PART2_MINOR, COND_GOORN, COND_DOMOVEO } from './core.js?v=8.2';
 
 const FB = 'https://www.gstatic.com/firebasejs/12.19.0/';
 const firebaseConfig = { apiKey: 'AIzaSyAw4mguBLX5RKw0qponSyGEacwiExt4OkI', authDomain: 'portmonka-951967.firebaseapp.com', projectId: 'portmonka-951967', storageBucket: 'portmonka-951967.firebasestorage.app', messagingSenderId: '723477690356', appId: '1:723477690356:web:261e152b2da52251b2ba1' };
@@ -34,7 +34,9 @@ export async function createFirestoreStore() {
         const is = await F.getDocs(instCol(d.id));
         return { id: d.id, ...d.data(), installments: is.docs.map(z => ({ id: z.id, ...z.data() })) };
       }));
-      return { cases };
+      let offers = null;
+      try { const u = await F.getDoc(F.doc(db, 'users', user.uid)); offers = u.exists() ? (u.data().domoveoNabidky || null) : null; } catch (e) { console.warn('chiméra nabídek', e); }
+      return { cases, offers };
     },
     async createCase(c, insts) {
       const cRef = F.doc(casesCol()), b = F.writeBatch(db);
@@ -104,13 +106,17 @@ export function createMemoryStore() {
   add('Grafika', 'Plakát Jazz Náchod', d(-38), { totalMinor: 850000 }, i => { i[0].invoicedAt = d(-37); });
   add('Grafika', 'Logo kavárna', d(-80), { totalMinor: 420000 }, i => { i[0].invoicedAt = d(-79); i[0].paidAt = d(-65); });
   add('Grafika', 'Vizitky', d(-20), { totalMinor: 240000 }, i => { i[0].invoicedAt = d(-20); i[0].paidAt = d(-14); });
+  const offers = { updatedAt: T, dphPct: 12, sazbaPct: 17, uspesnostPct: 20, celkemMinor: 1394700, realneMinor: 278900, polozky: [
+    { klient: 'Ukázka Novotná', obec: 'Trutnov', castkaSDphKc: 51839, zakladKc: 46285, provizeMinor: 786800, schuzka: d(-4) },
+    { klient: 'Ukázka Dvořák', obec: 'Náchod', castkaSDphKc: 25292, zakladKc: 22582, provizeMinor: 383900, schuzka: d(-3) },
+    { klient: 'Ukázka Malá', obec: 'Hradec Králové', castkaSDphKc: 26925, zakladKc: 24040, provizeMinor: 224000, schuzka: d(-1) }] };
   const find = (cid, id) => cases.find(c => c.id === cid)?.installments.find(i => i.id === id);
   const clone = x => JSON.parse(JSON.stringify(x));
   return {
     mode: 'memory',
     onAuth(cb) { setTimeout(() => cb({ email: 'ukázková data', uid: 'demo' }), 0); },
     signIn() {}, signOut() { location.search = ''; },
-    async load() { return { cases: clone(cases) }; },
+    async load() { return { cases: clone(cases), offers: clone(offers) }; },
     async createCase(c, insts) { const id = uid(); cases.unshift({ ...c, id, createdAt: T, installments: insts.map(i => ({ ...pickInst(i), id: uid() })) }); return id; },
     async updateCase(caseId, patch, changes) {
       const c = cases.find(x => x.id === caseId); if (!c) throw new Error('Případ nenalezen');
