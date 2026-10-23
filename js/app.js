@@ -1,6 +1,7 @@
 // Portmonka 08 – UI nad deterministickým jádrem (core.js) a datovou vrstvou (store.js).
-import * as C from './core.js?v=8.4';
-import { createFirestoreStore, createMemoryStore } from './store.js?v=8.4';
+import * as C from './core.js?v=8.5';
+import { createFirestoreStore, createMemoryStore } from './store.js?v=8.5';
+import * as O from './orbit.js?v=8.5';
 
 const DEMO = new URLSearchParams(location.search).has('demo');
 const S = { tab: 'ted', user: null, cases: [], offers: null, loaded: false, filter: 'all', q: '', open: null, incMode: 'month', sel: new Set(), showWhy: false, busy: false, err: null };
@@ -20,8 +21,8 @@ const ICON = {
   reload: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>'
 };
 const MARK = '<svg class="mark" viewBox="0 0 40 40" aria-hidden="true"><rect x="3" y="11" width="34" height="24" rx="8" fill="none" stroke="#5eead4" stroke-width="3"></rect><path d="M11 11 C11 4 29 4 29 11" fill="none" stroke="#b493ff" stroke-width="3" stroke-linecap="round"></path><circle cx="20" cy="23" r="4" fill="#5eead4"></circle><circle cx="31" cy="6" r="2" fill="#f5b84a"></circle></svg>';
-const ELF = (pose = 'klid', size = 96) => `<img class="elfimg" src="img/elf/${pose}.webp?v=8.4" alt="Skřítek Portmonky" width="${size}" height="${size}" loading="lazy">`;
-const SI = (s, sz = 22) => SRC(s).icon ? `<img class="si" src="img/src/${SRC(s).icon}.webp?v=8.4" alt="" width="${sz}" height="${sz}" loading="lazy">` : SRC(s).emoji ? `<span class="si si-e" style="font-size:${Math.round(sz * .8)}px" aria-hidden="true">${SRC(s).emoji}</span>` : '';
+const ELF = (pose = 'klid', size = 96) => `<img class="elfimg" src="img/elf/${pose}.webp?v=8.5" alt="Skřítek Portmonky" width="${size}" height="${size}" loading="lazy">`;
+const SI = (s, sz = 22) => SRC(s).icon ? `<img class="si" src="img/src/${SRC(s).icon}.webp?v=8.5" alt="" width="${sz}" height="${sz}" loading="lazy">` : SRC(s).emoji ? `<span class="si si-e" style="font-size:${Math.round(sz * .8)}px" aria-hidden="true">${SRC(s).emoji}</span>` : '';
 
 function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 2600); }
 
@@ -45,10 +46,10 @@ async function run(fn, okMsg) {
 
 /* ---------------- kostra ---------------- */
 function header() {
-  const tf = [['ted', 'Teď'], ['prijem', 'Příjem'], ['pripady', 'Případy'], ['souhrn', 'Souhrn']];
-  const tx = [['cas', 'Čas'], ['obj', 'Objevitel'], ['lab', 'Laboratoř']];
+  const tf = [['ted', 'Teď'], ['orbit', 'Orbit'], ['prijem', 'Příjem'], ['pripady', 'Případy'], ['souhrn', 'Souhrn']];
+  const tx = [['obj', 'Objevitel'], ['lab', 'Laboratoř']];
   return `<header class="top"><div class="top-in">
-    <div class="brand"><img class="logo" src="img/logo-96.webp?v=8.4" alt="" width="44" height="44"><div><b class="wm">Portmonka</b><small>zvědavý účetní skřítek</small></div></div>
+    <div class="brand"><img class="logo" src="img/logo-96.webp?v=8.5" alt="" width="44" height="44"><div><b class="wm">Portmonka</b><small>zvědavý účetní skřítek</small></div></div>
     <nav class="nav" aria-label="Pohledy"><span class="grp">Finance</span>${tf.map(t => `<button type="button" class="tab${S.tab === t[0] ? ' on' : ''}" data-a="tab" data-t="${t[0]}">${t[1]}</button>`).join('')}
       <span class="grp">Objevování</span>${tx.map(t => `<button type="button" class="tab x${S.tab === t[0] ? ' on' : ''}" data-a="tab" data-t="${t[0]}">${t[1]}</button>`).join('')}</nav>
     <div class="user">${DEMO ? '<span class="demo">UKÁZKOVÁ DATA</span>' : ''}
@@ -60,7 +61,7 @@ function header() {
 function render() {
   const app = $('#app');
   if (!S.user) {
-    app.innerHTML = `<div class="wrap"><section class="login card"><img class="logo big" src="img/logo-96.webp?v=8.4" alt="Logo Portmonky" width="96" height="96">
+    app.innerHTML = `<div class="wrap"><section class="login card"><img class="logo big" src="img/logo-96.webp?v=8.5" alt="Logo Portmonky" width="96" height="96">
       <h1 class="wm">Portmonka</h1><p>Zvědavý účetní skřítek. Přihlas se přes Google, data se ukládají do tvého zabezpečeného prostoru ve Firestore.</p>
       <div class="btns" style="justify-content:center;margin-top:18px"><button type="button" class="btn solid" data-a="login">Přihlásit přes Google</button>
       <a class="btn ghost" href="?demo=1" style="text-decoration:none;display:inline-flex;align-items:center">Prohlédnout s ukázkovými daty</a></div></section></div>`;
@@ -73,6 +74,7 @@ function render() {
   else if (S.tab === 'prijem') body = viewPrijem(I);
   else if (S.tab === 'pripady') body = viewPripady(I);
   else if (S.tab === 'souhrn') body = viewSouhrn(I);
+  else if (S.tab === 'orbit') body = viewOrbit(I);
   else body = viewSoon(S.tab);
   app.innerHTML = `<div class="wrap">${header()}${S.err ? `<div class="warnbox" style="margin-bottom:14px">${esc(S.err)}</div>` : ''}${body}
     <div class="foot">Portmonka 08 · ${DEMO ? 'ukázková data, nic se neukládá' : esc(S.user.email)} · Matematika = aplikace, interpretace = Skřítek.</div></div>`;
@@ -162,6 +164,58 @@ function timeline(I, T) {
     <div style="margin-top:14px"><span class="flag">ODHAD · NE GARANCE</span> <span class="meta">Kolik by mělo přijít na účet (pravidlo: fakturace do 3 dnů od nároku, platba do 3 dnů po faktuře)</span></div>
     <div class="pred">${[7, 30, 90].map(n => `<div><span>do ${n} dní</span><b>${K(C.forecast(I, T, n))}</b></div>`).join('')}</div>
   </section>`;
+}
+
+/* ---------------- ORBIT (fáze 4a) ---------------- */
+function viewOrbit(I) {
+  const T = today(), o = O.orbit(I, T), L = o.layers, led = o.ledger;
+  const pc = v => Math.min(100, o.total ? v / o.total * 100 : 0);
+  const stateTxt = c => c.state === 'done' ? '<span class="ob ok">✅ na účtu</span>'
+    : c.state === 'invoiced' ? '<span class="ob mid">🟡 až dorazí faktury</span>'
+    : c.state === 'forecast' ? '<span class="ob lo">◌ z odhadu</span>'
+    : `<span class="ob no">chybí ${K(c.amountMinor - c.all)}</span>`;
+  const ready = I.filter(i => i.st === 'READY').sort((a, b) => b.amountMinor - a.amountMinor);
+  const inv = I.filter(i => i.st === 'INVOICED');
+  let pose = 'klid', hl, meta;
+  if (!o.nextOpen) { pose = 'hura'; hl = 'Orbit! Všechny náklady za ' + C.monShort(T) + ' jsou pokryté.'; meta = o.surplusAll > 0 ? 'Nad náklady je ' + K(o.surplusAll) + '. Mrkni dolů na odměnu měsíce 😉' : 'Těsně, ale jo.'; }
+  else {
+    const c = o.nextOpen, miss = c.amountMinor - c.likely, days = C.diffDays(T, c.due);
+    pose = days <= 5 ? 'nesedi' : 'cas';
+    hl = c.emoji + ' ' + c.name + (c.running ? ' (průběžně)' : ' je splatné ' + C.fmtDateShort(c.due) + (days >= 0 ? ' – za ' + days + ' ' + plural(days, 'den', 'dny', 'dní') : '')) + ' a jistě chybí ' + K(miss) + '.';
+    meta = ready.length ? 'Nejrychlejší pomoc: vyfakturuj ' + ready[0].title + ' (' + K(ready[0].amountMinor) + ')' + (ready.length > 1 ? ' a další ' + (ready.length - 1) + '.' : '.')
+      : inv.length ? 'Na cestě jsou ' + inv.length + ' ' + plural(inv.length, 'faktura', 'faktury', 'faktur') + ' za ' + K(C.sumMinor(inv)) + '.'
+      : 'Teď pomůže každá nová zakázka – makej, ať si můžeš dopřát 😉';
+  }
+  const rw = o.rewards.map(r => `<div class="rw${r.unlocked ? ' on' : ''}"><span class="re">${r.unlocked ? r.emoji : '🔒'}</span><div class="l"><b>+${K(r.overMinor)} nad náklady</b><span>${esc(r.text)}</span></div></div>`).join('');
+  const cushPct = led.cushionTarget ? Math.min(100, Math.round(led.cushion / led.cushionTarget * 100)) : 0;
+  return `<div class="grid">
+  <div class="hero">
+    <section class="mission ormis"><div class="k" style="color:#8fd8cc">Orbit · ${C.monShort(T)} ${T.slice(0, 4)}</div>
+      <div class="big">${o.pct} %</div>
+      <p>nákladů měsíce (${K(o.total)}) pokrývají příjmy · jistě ${o.pctSure} %, s fakturami ${o.pctLikely} %</p>
+      <div class="obar" role="img" aria-label="Pokrytí nákladů ${o.pct} procent"><i class="s" style="width:${pc(L.sure)}%"></i><i class="l" style="width:${pc(L.likely) - pc(L.sure)}%"></i><i class="f" style="width:${pc(L.all) - pc(L.likely)}%"></i></div>
+      <div class="olg"><span><i class="s"></i>na účtu ${K(L.paid)}</span><span><i class="l"></i>na cestě + lze fakturovat ${K(L.onway + L.ready)}</span><span><i class="f"></i>odhad ${K(L.forecast)}</span></div>
+    </section>
+    <section class="card"><div class="k">Skřítek hlídá orbit</div>
+      <div class="elf" style="margin-top:12px">${ELF(pose, 104)}<div class="bubble"><div class="hl">${esc(hl)}</div><div class="meta">${esc(meta)}</div></div></div></section>
+  </div>
+  <section class="card"><div class="k">Stupně rakety · náklady podle splatnosti</div>
+    ${o.costs.map(c => `<div class="row"><div class="l"><b>${c.emoji} ${esc(c.label)}</b><span>${c.running ? 'průběžně celý měsíc' : 'splatné ' + C.fmtDateShort(c.due)}${c.note ? ' · ' + esc(c.note) : ''}${c.assumed ? ' · <i>' + esc(c.assumed) + '</i>' : ''}</span></div><span class="mono">${K(c.amountMinor)}</span>${stateTxt(c)}</div>`).join('')}
+  </section>
+  <div class="grid g2">
+    <section class="card"><div class="k">Odměny měsíce · signál „už si to můžeš dovolit“</div>
+      <div class="meta" style="margin:4px 0 8px">Každý měsíc nové. Odemykají se přebytkem nad náklady (i s odhadem); nic se neodečítá.</div>${rw}</section>
+    <section class="card"><div class="k">🛟 Polštář · rezerva 1 měsíc nákladů</div>
+      <div class="obar sm"><i class="s" style="width:${cushPct}%"></i></div>
+      <div class="meta">${K(led.cushion)} z ${K(led.cushionTarget)}${o.started ? '' : ' · plní se od ' + C.monShort(o.startsAt + '-01') + ' ' + o.startsAt.slice(0, 4) + ' (začínáme od nuly)'}${led.hole ? ' · díra z dřívějška ' + K(led.hole) : ''}</div>
+      <div class="k" style="margin-top:18px">🐖 Prasátko · nevyčerpané peníze</div>
+      <div class="big2">${K(o.piggyEnd)}</div>
+      <div class="meta">${K(led.piggy)} naspořeno${o.overCushion ? ' + ' + K(o.overCushion) + ' čeká na konec měsíce' : ''}. Plní se až po naplnění polštáře.</div>
+      ${o.dreams.map(d => `<div class="dream${d.ready ? ' on' : ''}"><span class="re">${d.emoji}</span><div class="l"><b>${esc(d.name)}</b><div class="obar sm"><i class="s" style="width:${Math.round(d.have / d.priceMinor * 100)}%"></i></div><span>${K(d.have)} z ${K(d.priceMinor)}${d.ready ? ' · můžeš! 🎉' : ''}</span></div></div>`).join('')}
+    </section>
+  </div>
+  <div class="meta">Orbit počítá jen skutečné příjmy v Portmonce (chiméra nabídek se nezapočítává). Náklady: společná domácnost M&M podle Myrdy 24. 10. 2026; úpravy nákladů a odškrtnutí splněných snů přijdou ve fázi 4b.</div>
+  </div>`;
 }
 
 /* ---------------- PŘÍJEM ---------------- */
