@@ -1,6 +1,6 @@
 // Portmonka 08 – UI nad deterministickým jádrem (core.js) a datovou vrstvou (store.js).
-import * as C from './core.js?v=8.0';
-import { createFirestoreStore, createMemoryStore } from './store.js?v=8.0';
+import * as C from './core.js?v=8.1';
+import { createFirestoreStore, createMemoryStore } from './store.js?v=8.1';
 
 const DEMO = new URLSearchParams(location.search).has('demo');
 const S = { tab: 'ted', user: null, cases: [], loaded: false, filter: 'all', q: '', open: null, incMode: 'month', sel: new Set(), showWhy: false, busy: false, err: null };
@@ -47,7 +47,7 @@ function header() {
   const tf = [['ted', 'Teď'], ['prijem', 'Příjem'], ['pripady', 'Případy'], ['souhrn', 'Souhrn']];
   const tx = [['cas', 'Čas'], ['obj', 'Objevitel'], ['lab', 'Laboratoř']];
   return `<header class="top"><div class="top-in">
-    <div class="brand">${MARK}<div><b>Portmonka</b><small>zvědavý účetní skřítek</small></div></div>
+    <div class="brand"><img class="logo" src="img/logo-96.webp?v=8.1" alt="" width="44" height="44"><div><b class="wm">Portmonka</b><small>zvědavý účetní skřítek</small></div></div>
     <nav class="nav" aria-label="Pohledy"><span class="grp">Finance</span>${tf.map(t => `<button type="button" class="tab${S.tab === t[0] ? ' on' : ''}" data-a="tab" data-t="${t[0]}">${t[1]}</button>`).join('')}
       <span class="grp">Objevování</span>${tx.map(t => `<button type="button" class="tab x${S.tab === t[0] ? ' on' : ''}" data-a="tab" data-t="${t[0]}">${t[1]}</button>`).join('')}</nav>
     <div class="user">${DEMO ? '<span class="demo">UKÁZKOVÁ DATA</span>' : ''}
@@ -59,8 +59,8 @@ function header() {
 function render() {
   const app = $('#app');
   if (!S.user) {
-    app.innerHTML = `<div class="wrap"><section class="login card">${MARK.replace('class="mark"', 'class="mark" style="width:64px;height:64px"')}
-      <h1>Portmonka</h1><p>Zvědavý účetní skřítek. Přihlas se přes Google, data se ukládají do tvého zabezpečeného prostoru ve Firestore.</p>
+    app.innerHTML = `<div class="wrap"><section class="login card"><img class="logo big" src="img/logo-96.webp?v=8.1" alt="Logo Portmonky" width="96" height="96">
+      <h1 class="wm">Portmonka</h1><p>Zvědavý účetní skřítek. Přihlas se přes Google, data se ukládají do tvého zabezpečeného prostoru ve Firestore.</p>
       <div class="btns" style="justify-content:center;margin-top:18px"><button type="button" class="btn solid" data-a="login">Přihlásit přes Google</button>
       <a class="btn ghost" href="?demo=1" style="text-decoration:none;display:inline-flex;align-items:center">Prohlédnout s ukázkovými daty</a></div></section></div>`;
     return;
@@ -121,7 +121,7 @@ function viewTed(I) {
   </div>
   <div class="grid g4">${metrics.map(m => `<div class="card metric"><div class="k">${m.k}</div><div class="v" style="color:${m.c}">${m.v}</div><span>${m.sub}</span></div>`).join('')}</div>
   ${gl.length ? `<section class="card"><div class="k">Na cestě · vyfakturováno, čeká na platbu</div>
-    ${gl.map(g => `<div class="row"><div class="l"><b>${g.no ? 'Faktura ' + esc(g.no) : esc(SRC(g.xs[0].source).name + ' · ' + g.xs[0].title)}</b><span>${g.xs.length > 1 || g.no ? g.xs.map(x => esc(x.title)).join(', ') + ' · ' : esc(g.xs[0].label) + ' · '}vyfakturováno ${C.fmtDateShort(g.at)} (${C.diffDays(g.at, T)} dní)</span></div>
+    ${gl.map(g => `<div class="row"><div class="l"><b>${g.no ? 'Faktura ' + esc(g.no) : esc(SRC(g.xs[0].source).name + ' · ' + g.xs[0].title)}</b><span>${g.xs.length > 1 || g.no ? g.xs.map(x => esc(x.title)).join(', ') + ' · ' : esc(g.xs[0].label) + ' · '}vyfakturováno ${C.fmtDateShort(g.at)} (${C.diffDays(g.at, T)} dní${C.diffDays(g.at, T) > C.FORECAST_RULE.payAfterInvoice ? ' · <b style="color:#ff7a6b;display:inline">po termínu platby</b>' : ''})</span></div>
       <span class="mono">${K(g.sum)}</span><button type="button" class="btn" data-a="pay-group" data-k="${esc(g.k)}">Přišlo na účet</button></div>`).join('')}</section>` : ''}
   ${timeline(I, T)}
   <section class="card"><div class="k">Výhled nároků · další měsíce</div>
@@ -147,7 +147,7 @@ function timeline(I, T) {
       <div class="legend"><span><i style="background:#a59fc9"></i>proplaceno</span><span><i style="background:#5eead4;border-color:#5eead4"></i>lze fakturovat</span><span><i style="box-shadow:inset 0 0 0 3px #a59fc9"></i>vyfakturováno</span><span><i style="border-style:dashed"></i>čeká</span></div></div>
     <div class="tlwrap"><div class="tl">${ticks}${lanes}<div class="today" style="left:calc(92px + (100% - 92px) * ${pos(T) / 100})"><b>DNES</b></div></div></div>
     <div class="meta">Ťukni na bod: otevře se případ. Splátky bez data (čekají na podmínku) najdeš v Případech.</div>
-    <div style="margin-top:14px"><span class="flag">ODHAD · NE GARANCE</span> <span class="meta">Kolik by mělo přijít na účet (pravidlo: fakturace do 3 dnů od nároku, platba ~20 dní po faktuře)</span></div>
+    <div style="margin-top:14px"><span class="flag">ODHAD · NE GARANCE</span> <span class="meta">Kolik by mělo přijít na účet (pravidlo: fakturace do 3 dnů od nároku, platba do 3 dnů po faktuře)</span></div>
     <div class="pred">${[7, 30, 90].map(n => `<div><span>do ${n} dní</span><b>${K(C.forecast(I, T, n))}</b></div>`).join('')}</div>
   </section>`;
 }

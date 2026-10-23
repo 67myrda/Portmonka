@@ -90,11 +90,12 @@ test('příjem s bonusem', () => {
 
 test('odhad: jen nedoplacené s datem, blokované ne', () => {
   const items = [
-    { amountMinor: 100, claimDate: '2026-10-01', invoicedAt: '2026-10-10' }, // ~30. 10.
-    { amountMinor: 200, claimDate: '2026-10-01' },                           // ready → +23 dní
+    { amountMinor: 100, claimDate: '2026-10-01', invoicedAt: '2026-10-10' }, // po termínu → zítra
+    { amountMinor: 200, claimDate: '2026-10-01' },                           // ready → +6 dní
     { amountMinor: 400, claimDate: null, blockingCondition: 'x' }
   ];
-  assert.equal(C.forecast(items, T, 7), 100);
+  assert.equal(C.forecast(items, T, 1), 100);
+  assert.equal(C.forecast(items, T, 7), 300);
   assert.equal(C.forecast(items, T, 30), 300);
   assert.equal(C.forecast(items, T, 90), 300);
 });

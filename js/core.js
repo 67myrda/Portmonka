@@ -174,9 +174,9 @@ export function bySource(items, today) {
 }
 
 /* ---------- odhad (ODHAD · NE GARANCE) ---------- */
-// Transparentní pravidlo: vyfakturované přijde ~20 dní po faktuře (nejdřív zítra),
-// „lze fakturovat“ se vyfakturuje do 3 dní a přijde o 20 dní později.
-export const FORECAST_RULE = { invoiceAfterReady: 3, payAfterInvoice: 20 };
+// Pravidlo (Myrda 23. 10. 2026): faktury se platí do 3 dnů (nejdřív zítra),
+// „lze fakturovat“ se vyfakturuje do 3 dnů a přijde o 3 dny později.
+export const FORECAST_RULE = { invoiceAfterReady: 3, payAfterInvoice: 3 };
 export function expectedPayDate(i, today) {
   const st = status(i, today);
   if (st === ST.INVOICED) { const d = addDays(i.invoicedAt, FORECAST_RULE.payAfterInvoice); return d > today ? d : addDays(today, 1); }
@@ -204,9 +204,9 @@ export function outlook(items, today, months = 6) {
 export function skritek(items, today) {
   const S = withStatus(items, today);
   const inv = S.filter(i => i.st === ST.INVOICED).map(i => ({ ...i, age: diffDays(i.invoicedAt, today) })).sort((a, b) => b.age - a.age);
-  if (inv[0] && inv[0].age >= 30) {
+  if (inv[0] && inv[0].age >= 7) {
     const x = inv[0];
-    return { cat: 'Něco mi nesedí', title: x.title + ' je vyfakturované už ' + x.age + ' dní a pořád nic.', short: 'Možná stojí za připomínku. Ostatní platby přicházejí rychleji?',
+    return { cat: 'Něco mi nesedí', title: x.title + ' je vyfakturované už ' + x.age + ' dní a pořád nic.', short: 'Platby obvykle chodí do 3 dnů po faktuře. Možná stojí za připomínku.',
       evidence: ['vyfakturováno ' + fmtDate(x.invoicedAt) + (x.invoiceNo ? ' (faktura ' + x.invoiceNo + ')' : '') + ' · ' + fmtKc(x.amountMinor) + ' (fakt)', 'dnes je to ' + x.age + ' dní (fakt)'], kind: 'fact' };
   }
   const ready = S.filter(i => i.st === ST.READY).map(i => ({ ...i, age: diffDays(i.claimDate, today) })).sort((a, b) => b.age - a.age);

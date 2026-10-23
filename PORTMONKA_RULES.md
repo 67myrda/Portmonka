@@ -22,6 +22,8 @@ Stručný výtah závazných pravidel (MASTER CONTEXT §16). Podrobnosti a histo
 - **Domoveo:** 17 % (firemní zakázka) / 25 % (vlastní klient) z ceny bez DPH. Nárok až po provedeném servisu; když klient technika nepustí, provize propadá. Bonus = samostatná splátka typu `bonus`, eviduje se až po potvrzení Domoveem.
 - **Grafika:** ruční jednorázové zakázky.
 - Více splátek lze spojit do jedné faktury (společné `invoiceId` + číslo faktury). Splátky zůstávají samostatné. Číslo faktury zadává vždy Myrda.
+- Faktury se platí **do 3 dnů** od vystavení (Myrda 23. 10. 2026). Odhad počítá s tímto pravidlem, déle nezaplacená faktura je „po termínu“.
+- GOORN: po vystavení faktury se zakázky v `goorn-zak` přepínají na „1. část zaplacena“ hned (ne až po platbě).
 
 ## Zdrojové aplikace (backend `portmonka-backend`)
 - **Domoveo = VÝHRADNĚ čtení.** Nikdy zápisové nástroje konektoru (akce_*, davka_*, navrh_zrusit, formuláře).

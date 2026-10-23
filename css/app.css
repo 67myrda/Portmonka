@@ -15,9 +15,14 @@ a{color:var(--mint)}
 .top{position:sticky;top:0;z-index:30;background:rgba(12,10,29,.82);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid rgba(51,44,92,.6);margin:0 -16px 16px;padding:10px 16px}
 .top-in{max-width:1240px;margin:0 auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .brand{display:flex;align-items:center;gap:10px;margin-right:auto}
-.brand b{font-family:Unbounded,sans-serif;font-weight:800;font-size:19px;letter-spacing:-.01em}
+.brand b{font-family:Unbounded,sans-serif;font-weight:800;font-size:21px;letter-spacing:-.01em}
 .brand small{display:block;font-size:10.5px;color:var(--mu);letter-spacing:.08em;text-transform:uppercase}
 .mark{width:38px;height:38px;flex:none}
+.logo{width:44px;height:44px;flex:none;animation:logoglow 4.5s ease-in-out infinite}
+.logo.big{width:96px;height:96px;display:block;margin:0 auto}
+.wm{background:linear-gradient(100deg,#6ea8ff 0%,#8f7bff 28%,#c77dff 46%,#ff9f43 66%,#ffd27a 80%,#6ea8ff 100%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;animation:sheen 9s linear infinite}
+@keyframes sheen{to{background-position:-250% 0}}
+@keyframes logoglow{0%,100%{filter:drop-shadow(0 0 6px rgba(110,140,255,.45))}50%{filter:drop-shadow(0 0 14px rgba(255,160,70,.55))}}
 .nav{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .nav .grp{font:600 10px 'JetBrains Mono',monospace;letter-spacing:.14em;color:var(--mu);text-transform:uppercase;margin:0 2px 0 8px}
 .tab{border:1px solid var(--ln);background:var(--s1);color:var(--fg);font:600 14px Manrope,sans-serif;border-radius:999px;padding:9px 15px;min-height:44px;cursor:pointer;transition:background .2s,border-color .2s}
