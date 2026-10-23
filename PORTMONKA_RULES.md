@@ -22,8 +22,13 @@ Stručný výtah závazných pravidel (MASTER CONTEXT §16). Podrobnosti a histo
 - **Domoveo:** 17 % (firemní zakázka) / 25 % (vlastní klient) z ceny bez DPH. Nárok až po provedeném servisu; když klient technika nepustí, provize propadá. Bonus = samostatná splátka typu `bonus`, eviduje se až po potvrzení Domoveem.
 - **Grafika:** ruční jednorázové zakázky.
 - Více splátek lze spojit do jedné faktury (společné `invoiceId` + číslo faktury). Splátky zůstávají samostatné. Číslo faktury zadává vždy Myrda.
-- Faktury se platí **do 3 dnů** od vystavení (Myrda 23. 10. 2026). Odhad počítá s tímto pravidlem, déle nezaplacená faktura je „po termínu“.
+- Faktury se platí **do 3 dnů** od vystavení (Myrda 23. 10. 2026). **Proplaceno se nastaví automaticky 3 dny po faktuře** (rozhodnutí A, 23. 10. 2026); když platba nepřijde, „Vrátit krok“. Při prvním načtení ze zdrojů se nároky Pro-Factoru starší 14 dnů berou jako zaplacené.
 - GOORN: po vystavení faktury se zakázky v `goorn-zak` přepínají na „1. část zaplacena“ hned (ne až po platbě).
+
+## Synchronizace (fáze 3)
+- Backend každou hodinu načte GOORN a Tahák a zapíše do Portmonky nové případy a posuny stavů. Zdroje se jen čtou. Nic nemaže, nevrací stav zpět, nepřepisuje ruční práci; bez duplicit.
+- GOORN: případ = instalace; „1. část zaplacena“ = vyfakturováno; „Čeká na 2. část“ = 2. část lze fakturovat; „Kompletně zaplaceno“ = obě vyfakturovány. Pro-Factor: případ = uzamčení města v Taháku, marže jako v Taháku.
+- Zdroje příjmů navíc: Krypto (výběry na fiat = příjem), Hravé dřevo (jen historie, příjem = marže M&M).
 
 ## Zdrojové aplikace (backend `portmonka-backend`)
 - **Domoveo = VÝHRADNĚ čtení.** Nikdy zápisové nástroje konektoru (akce_*, davka_*, navrh_zrusit, formuláře).
