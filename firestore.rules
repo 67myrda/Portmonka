@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// Portmonka – pravidla Firestore (fáze 2, 23. 10. 2026)
+// Portmonka – pravidla Firestore (fáze 2c, 23. 10. 2026: + zdroje Krypto a Hravé dřevo)
 // Každý vidí jen svá data a zápis musí mít správný tvar.
 // Kompatibilní se staršími dokumenty z CORE (pole jako expectedPaymentDate zůstávají povolená).
 
@@ -17,7 +17,7 @@ service cloud.firestore {
       return d.keys().hasOnly(['financeSpaceId', 'source', 'title', 'triggerDate', 'triggerType', 'kind',
                                'totalAmountMinor', 'currency', 'clientName', 'note', 'externalId', 'rate',
                                'priceNetMinor', 'createdAt', 'updatedAt'])
-        && d.source in ['Pro-Factor', 'GOORN', 'Domoveo.cz', 'Grafika']
+        && d.source in ['Pro-Factor', 'GOORN', 'Domoveo.cz', 'Grafika', 'Krypto', 'Hravé dřevo']
         && d.title is string && d.title.size() > 0 && d.title.size() <= 200
         && isDate(opt(d, 'triggerDate'))
         && isMoney(d.totalAmountMinor)

@@ -201,3 +201,4 @@ a{color:var(--mint)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 .chim{border-style:dashed;border-color:#4a3d86}
 .chim .outl b{color:#c49bff}
+.si-e{display:inline-block;width:auto;height:auto;line-height:1;vertical-align:-3px;filter:none}

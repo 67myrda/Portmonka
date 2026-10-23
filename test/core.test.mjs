@@ -128,3 +128,12 @@ test('Skřítek: chiméra nabídek → Co kdyby…, nikdy v součtech', () => {
   assert.equal(C.skritek([], '2026-10-23', null), null);
   assert.equal(C.totals([], '2026-10-23').WAITING, 0);
 });
+
+test('Krypto a Hravé dřevo: rovnou proplaceno, Hravé dřevo jen historie', () => {
+  const r = C.buildInstallments({ source: 'Krypto', triggerDate: '2025-01-31', totalMinor: 1363000 });
+  assert.equal(r.installments[0].paidAt, '2025-01-31');
+  assert.equal(C.status(r.installments[0], '2026-10-23'), 'PAID');
+  assert.ok(C.ADD_SOURCES.includes('Krypto') && !C.ADD_SOURCES.includes('Hravé dřevo'));
+  const inc = C.income(r.installments.map(i => ({ ...i, source: 'Krypto' })), 'month', '2025-01-31');
+  assert.equal(inc.cur.bySrc.Krypto, 1363000);
+});

@@ -1,6 +1,6 @@
 // Datová vrstva Portmonky: Firestore (ostrý provoz) a paměťový režim (ukázková data, nic se neukládá).
 // Model: users/{uid}/cases/{caseId}/installments/{id} + users/{uid}/events/{id}
-import { buildInstallments, localToday, addDays, addMonths, GOORN_PART1_MINOR, GOORN_PART2_MINOR, COND_GOORN, COND_DOMOVEO } from './core.js?v=8.2';
+import { buildInstallments, localToday, addDays, addMonths, GOORN_PART1_MINOR, GOORN_PART2_MINOR, COND_GOORN, COND_DOMOVEO } from './core.js?v=8.3';
 
 const FB = 'https://www.gstatic.com/firebasejs/12.19.0/';
 const firebaseConfig = { apiKey: 'AIzaSyAw4mguBLX5RKw0qponSyGEacwiExt4OkI', authDomain: 'portmonka-951967.firebaseapp.com', projectId: 'portmonka-951967', storageBucket: 'portmonka-951967.firebasestorage.app', messagingSenderId: '723477690356', appId: '1:723477690356:web:261e152b2da52251b2ba1' };
