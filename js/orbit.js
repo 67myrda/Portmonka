@@ -1,6 +1,6 @@
 // Portmonka – Orbit: umořování nákladů, polštář, prasátko a sny (fáze 4a, 24. 10. 2026).
 // Deterministické: z případů (příjmy) a konfigurace nákladů. Žádný DOM, žádný Firestore.
-import { addDays, addMonths, startOfMonth, endOfMonth, isIso, sumMinor, status, expectedPayDate, isBlocked, ST } from './core.js?v=8.5';
+import { addDays, addMonths, startOfMonth, endOfMonth, isIso, sumMinor, status, expectedPayDate, isBlocked, ST } from './core.js?v=8.6';
 
 const kc = n => Math.round(n * 100);
 

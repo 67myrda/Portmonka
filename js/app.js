@@ -1,7 +1,7 @@
 // Portmonka 08 – UI nad deterministickým jádrem (core.js) a datovou vrstvou (store.js).
-import * as C from './core.js?v=8.5';
-import { createFirestoreStore, createMemoryStore } from './store.js?v=8.5';
-import * as O from './orbit.js?v=8.5';
+import * as C from './core.js?v=8.6';
+import { createFirestoreStore, createMemoryStore } from './store.js?v=8.6';
+import * as O from './orbit.js?v=8.6';
 
 const DEMO = new URLSearchParams(location.search).has('demo');
 const S = { tab: 'ted', user: null, cases: [], offers: null, loaded: false, filter: 'all', q: '', open: null, incMode: 'month', sel: new Set(), showWhy: false, busy: false, err: null };
@@ -21,8 +21,8 @@ const ICON = {
   reload: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>'
 };
 const MARK = '<svg class="mark" viewBox="0 0 40 40" aria-hidden="true"><rect x="3" y="11" width="34" height="24" rx="8" fill="none" stroke="#5eead4" stroke-width="3"></rect><path d="M11 11 C11 4 29 4 29 11" fill="none" stroke="#b493ff" stroke-width="3" stroke-linecap="round"></path><circle cx="20" cy="23" r="4" fill="#5eead4"></circle><circle cx="31" cy="6" r="2" fill="#f5b84a"></circle></svg>';
-const ELF = (pose = 'klid', size = 96) => `<img class="elfimg" src="img/elf/${pose}.webp?v=8.5" alt="Skřítek Portmonky" width="${size}" height="${size}" loading="lazy">`;
-const SI = (s, sz = 22) => SRC(s).icon ? `<img class="si" src="img/src/${SRC(s).icon}.webp?v=8.5" alt="" width="${sz}" height="${sz}" loading="lazy">` : SRC(s).emoji ? `<span class="si si-e" style="font-size:${Math.round(sz * .8)}px" aria-hidden="true">${SRC(s).emoji}</span>` : '';
+const ELF = (pose = 'klid', size = 96) => `<img class="elfimg" src="img/elf/${pose}.webp?v=8.6" alt="Skřítek Portmonky" width="${size}" height="${size}" loading="lazy">`;
+const SI = (s, sz = 22) => SRC(s).icon ? `<img class="si" src="img/src/${SRC(s).icon}.webp?v=8.6" alt="" width="${sz}" height="${sz}" loading="lazy">` : SRC(s).emoji ? `<span class="si si-e" style="font-size:${Math.round(sz * .8)}px" aria-hidden="true">${SRC(s).emoji}</span>` : '';
 
 function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 2600); }
 
@@ -49,7 +49,7 @@ function header() {
   const tf = [['ted', 'Teď'], ['orbit', 'Orbit'], ['prijem', 'Příjem'], ['pripady', 'Případy'], ['souhrn', 'Souhrn']];
   const tx = [['obj', 'Objevitel'], ['lab', 'Laboratoř']];
   return `<header class="top"><div class="top-in">
-    <div class="brand"><img class="logo" src="img/logo-96.webp?v=8.5" alt="" width="44" height="44"><div><b class="wm">Portmonka</b><small>zvědavý účetní skřítek</small></div></div>
+    <div class="brand"><img class="logo" src="img/logo-96.webp?v=8.6" alt="" width="44" height="44"><div><b class="wm">Portmonka</b><small>zvědavý účetní skřítek</small></div></div>
     <nav class="nav" aria-label="Pohledy"><span class="grp">Finance</span>${tf.map(t => `<button type="button" class="tab${S.tab === t[0] ? ' on' : ''}" data-a="tab" data-t="${t[0]}">${t[1]}</button>`).join('')}
       <span class="grp">Objevování</span>${tx.map(t => `<button type="button" class="tab x${S.tab === t[0] ? ' on' : ''}" data-a="tab" data-t="${t[0]}">${t[1]}</button>`).join('')}</nav>
     <div class="user">${DEMO ? '<span class="demo">UKÁZKOVÁ DATA</span>' : ''}
@@ -61,7 +61,7 @@ function header() {
 function render() {
   const app = $('#app');
   if (!S.user) {
-    app.innerHTML = `<div class="wrap"><section class="login card"><img class="logo big" src="img/logo-96.webp?v=8.5" alt="Logo Portmonky" width="96" height="96">
+    app.innerHTML = `<div class="wrap"><section class="login card"><img class="logo big" src="img/logo-96.webp?v=8.6" alt="Logo Portmonky" width="96" height="96">
       <h1 class="wm">Portmonka</h1><p>Zvědavý účetní skřítek. Přihlas se přes Google, data se ukládají do tvého zabezpečeného prostoru ve Firestore.</p>
       <div class="btns" style="justify-content:center;margin-top:18px"><button type="button" class="btn solid" data-a="login">Přihlásit přes Google</button>
       <a class="btn ghost" href="?demo=1" style="text-decoration:none;display:inline-flex;align-items:center">Prohlédnout s ukázkovými daty</a></div></section></div>`;
@@ -323,12 +323,23 @@ function viewSouhrn(I) {
   const parts = [['PAID', 'Proplaceno', 'skutečně na účtu'], ['INVOICED', 'Na cestě', 'vyfakturováno, čeká na platbu'], ['READY', 'K akci', 'lze fakturovat hned'], ['WAITING', 'Čeká', 'budoucí nároky a podmínky'], ['LOST', 'Propadlo', 'nepočítá se do „zbývá“']];
   let acc = 0; const stops = parts.map(p => { const a = acc; acc += t[p[0]] / all * 360; return `${C.ST_COLOR[p[0]]} ${a}deg ${acc}deg`; }).join(',');
   const src = C.bySource(I, T).filter((s, k) => k < 4 || s.total > 0);
-  const planets = src.map((s, pi) => { const sz = Math.round(14 + Math.sqrt(s.total / 100) / 9), inset = [0, 7, 3, 10, 5, 9][pi] ?? 6; return `<div class="orbit" style="inset:${inset}%;border-color:transparent;animation:${pi % 2 ? 'spinr' : 'spin'} ${38 + pi * 14}s linear infinite;animation-delay:-${pi * 7}s"><div class="planet" style="width:${sz}px;height:${sz}px;background:${SRC(s.source).color};color:${SRC(s.source).color}"><span>${SRC(s.source).name}</span></div></div>`; }).join('');
+  // vnější prstenec = zdroje v barvách planet (Myrda 26. 10. 2026)
+  let acc2 = 0; const srcStops = src.filter(s => s.total > 0).map(s => { const a = acc2; acc2 += s.total / all * 360; return `${SRC(s.source).color} ${a}deg ${acc2}deg`; }).join(',') || '#2a2550 0deg 360deg';
+  // planety: stejná doba oběhu a rovnoměrné rozestupy = nikdy se nesrazí; popisek po oblouku kolem planety, vždy svisle
+  const PER = 90, n = src.length;
+  const planets = src.map((s, pi) => {
+    const sz = Math.round(14 + Math.sqrt(s.total / 100) / 9), name = SRC(s.source).name, col = SRC(s.source).color;
+    const ar = Math.max(sz / 2 + 6, name.length * 6.4 / (Math.PI * 0.85)), W = Math.ceil(2 * (ar + 14)), c = W / 2, inset = [0, 8, 3, 11, 5, 9][pi] ?? 6;
+    const delay = -(PER * pi / n).toFixed(2), pid = 'pl' + pi;
+    return `<div class="orbit" style="inset:${inset}%;border-color:transparent;animation:spin ${PER}s linear infinite;animation-delay:${delay}s"><div class="planet" style="width:${W}px;height:${W}px"><svg class="pls" viewBox="0 0 ${W} ${W}" width="${W}" height="${W}" style="animation:spinr ${PER}s linear infinite;animation-delay:${delay}s" role="img" aria-label="${esc(name)} ${K(s.total)}"><defs><path id="${pid}" d="M ${c - ar} ${c} A ${ar} ${ar} 0 0 1 ${c + ar} ${c}"/></defs><circle cx="${c}" cy="${c}" r="${sz / 2}" fill="${col}" style="filter:drop-shadow(0 0 9px ${col})"/><text class="plt"><textPath href="#${pid}" startOffset="50%" text-anchor="middle">${esc(name)}</textPath></text></svg></div></div>`;
+  }).join('');
   return `<div class="grid g2" style="align-items:center">
   <section class="card"><div class="k">Stav vesmíru</div>
     <div class="uni" style="margin-top:10px"><div class="orbit" style="inset:4%"></div><div class="orbit" style="inset:12%"></div>${planets}
-      <div class="donut" style="background:conic-gradient(${stops});-webkit-mask:radial-gradient(circle,transparent 46%,#000 47%);mask:radial-gradient(circle,transparent 46%,#000 47%)"></div>
+      <div class="donut" style="background:conic-gradient(${srcStops});-webkit-mask:radial-gradient(circle,transparent 50%,#000 51%);mask:radial-gradient(circle,transparent 50%,#000 51%)"></div>
+      <div class="donut st" style="background:conic-gradient(${stops});-webkit-mask:radial-gradient(circle,transparent 66%,#000 67%);mask:radial-gradient(circle,transparent 66%,#000 67%)"></div>
       <div class="hole"><span>celkem evidováno</span><b>${K(t.total)}</b><span>${S.cases.length} ${plural(S.cases.length, 'případ', 'případy', 'případů')} · ${I.length} ${plural(I.length, 'splátka', 'splátky', 'splátek')}</span></div></div>
+    <div class="meta" style="text-align:center;margin-top:8px">Široký prstenec = podíl zdrojů · tenký vnitřní = stav (proplaceno, na cestě, k akci, čeká)</div>
   </section>
   <section class="card"><div class="k">Z čeho se vesmír skládá</div>
     ${parts.map(p => `<div class="row"><div class="l"><b><span class="chip" style="color:${C.ST_COLOR[p[0]]};padding:0">●</span> ${p[1]}</b><span>${p[2]}</span></div><span class="mono">${K(t[p[0]])}</span></div>`).join('')}

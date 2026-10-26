@@ -171,7 +171,10 @@ a{color:var(--mint)}
 .hole span{font-size:12px;color:var(--mu)}
 .orbit{position:absolute;inset:0;border-radius:50%;border:1px dashed rgba(165,159,201,.2)}
 .planet{position:absolute;left:50%;top:0;border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 0 18px currentColor}
-.planet span{position:absolute;left:50%;top:100%;transform:translateX(-50%);margin-top:6px;font:600 11px Manrope,sans-serif;white-space:nowrap;color:var(--fg)}
+.planet{box-shadow:none;border-radius:0}
+.pls{display:block;overflow:visible}
+.plt{font:700 11px Manrope,sans-serif;fill:var(--fg);letter-spacing:.02em;paint-order:stroke;stroke:var(--bg);stroke-width:3px}
+.donut.st{inset:29%;animation:none}
 
 /* přihlášení */
 .login{max-width:520px;margin:9vh auto;text-align:center}
