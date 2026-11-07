@@ -304,3 +304,7 @@ a{color:var(--mint)}
 .split2.pr{grid-template-columns:minmax(0,1.7fr) minmax(0,1fr)}
 @media (max-width:1100px){.split2.pr{grid-template-columns:1fr}.split2.pr .sticky{position:static}}
 @media (max-width:420px){.case .t{font-size:13px}.cfoot .mono{font-size:13px}}
+
+.case.seedc{border-style:dashed;background:linear-gradient(150deg,color-mix(in srgb,var(--sc) 14%,transparent) 0%,transparent 70%),var(--s1)}
+.sbar.seed i{flex:1;background:radial-gradient(circle,#9be37a 1.6px,transparent 2.2px) 0 0/8px 8px,#1f3320}
+.bar[role=button]:focus-visible{outline:2px solid var(--mint);outline-offset:2px}
