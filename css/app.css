@@ -238,3 +238,46 @@ a{color:var(--mint)}
 .g4.m6{grid-template-columns:repeat(3,minmax(0,1fr))}
 @media (max-width:760px){.g4.m6{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:440px){.g4.m6{grid-template-columns:1fr}}
+
+/* Úroda (v8.8) – zemědělské stavy: 🌱 klíčí · 🌾 sklizeno · 🍂 uschlo */
+.urhead{display:flex;flex-direction:column;gap:12px;background:radial-gradient(500px 220px at 100% 0,rgba(155,227,122,.10),transparent 70%),linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.01))}
+.urtop{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.urh{margin:4px 0 0;font-weight:800;font-size:28px;color:#9be37a}
+.useg{display:inline-flex;flex-wrap:wrap;background:var(--s1);border:1px solid var(--ln);border-radius:16px;padding:3px;gap:2px}
+.useg button{border:0;background:none;cursor:pointer;padding:6px 12px;min-height:44px;border-radius:13px;font:700 13px Manrope,sans-serif;color:#c3bde6;line-height:1.1;text-align:center}
+.useg button small{display:block;font-size:10px;font-weight:600;opacity:.7;margin-top:2px}
+.useg button.on{background:#9be37a;color:#13240d}
+.useg button:focus-visible,.urbar.click:focus-visible,.metric.click:focus-visible{outline:2px solid var(--mint);outline-offset:2px}
+.unav{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.unav .mono{font-size:13px;color:#c3bde6;text-align:center}
+.unav .ibtn{font-size:20px}.unav .ibtn:disabled{opacity:.3;cursor:default}
+.ubig{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.ubig .disp{font-weight:800;font-size:clamp(30px,5vw,44px);line-height:1;font-variant-numeric:tabular-nums}
+.ucmp{font:600 12px 'JetBrains Mono',monospace;padding:3px 8px;border-radius:999px;background:#1f3320;color:#9be37a}
+.ucmp.down{background:#2e2218;color:#c9a27a}
+.ustrip{display:flex;height:14px;border-radius:8px;overflow:hidden;background:var(--s3)}
+.ustrip i{display:block;height:100%}
+.ustrip .d{background:#e8c35a}.ustrip .c{background:radial-gradient(circle,#9be37a 1.5px,transparent 2px) 0 0/7px 7px,#2f4a2a}.ustrip .l{background:#8a6a4a}
+.ulegend,.ukey{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:#c3bde6}
+.ulegend b{color:var(--fg);font-variant-numeric:tabular-nums}
+.ukey{font-size:11.5px;color:var(--mu);margin-bottom:6px}
+.urchart{display:block;width:100%;height:auto}
+.urbar.click{cursor:pointer}.urbar.click:hover rect{filter:brightness(1.15)}
+.usrcs{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:12px}
+.usrc{background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.01));border:1px solid var(--ln);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.usrc b{display:flex;align-items:center;gap:6px;font-size:13px}
+.usrc .v{font:600 20px Unbounded,sans-serif;font-variant-numeric:tabular-nums}
+.ubar{display:block;height:5px;border-radius:3px;background:var(--s3);overflow:hidden;margin-top:4px}.ubar i{display:block;height:100%}
+.elfline{display:flex;gap:12px;align-items:center;font-size:14px}.elfline .elfimg{flex:none}
+.ufeed{display:flex;flex-direction:column;gap:14px;margin-top:10px}
+.uday{display:flex;flex-direction:column;gap:6px}
+.udh{display:flex;justify-content:space-between;font:500 12px 'JetBrains Mono',monospace;color:var(--mu);border-bottom:1px solid var(--s3);padding-bottom:4px}.udh b{color:var(--fg)}
+.urrow{display:grid;grid-template-columns:6px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 10px;border-radius:12px;background:var(--s1);border:1px solid #2a2357}
+.urrow .ust{width:4px;height:32px;border-radius:2px}
+.urrow b{display:block;font-size:14px;overflow-wrap:anywhere}
+.urrow .meta{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.urrow.lost .mono{text-decoration:line-through;color:var(--mu)}
+.upill{display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;margin:3px 6px 0 0}
+.upill.cond{background:#1f3320;color:#9be37a}.upill.done{background:#3a2f10;color:#e8c35a}.upill.lost{background:#2e2218;color:#c9a27a}.upill.ap{background:var(--s3);color:var(--mu)}
+.usucc{font-size:18px;color:#e8c35a}
+.metric.click{cursor:pointer}.metric.click:hover{border-color:#9be37a}
