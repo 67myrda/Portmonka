@@ -2,7 +2,7 @@
 // Semínka = den, Zaseto = týden, Úroda = měsíc, Sklizeň = zpětně (6 měsíců / rok / vše).
 // Stavy: 🌱 klíčí (čeká na podmínku) · 🌾 sklizeno (fakturováno) · 🍂 uschlo (storno/propadlo).
 // Deterministické, žádný DOM ani Firestore. Úroda nikdy nemění nároky.
-import { addDays, addMonths, startOfWeek, startOfMonth, endOfMonth, SOURCES, SOURCE_ORDER } from './core.js?v=8.9';
+import { addDays, addMonths, startOfWeek, startOfMonth, endOfMonth, SOURCES, SOURCE_ORDER } from './core.js?v=8.10';
 
 export const SEED_SRC = { pf: 'Pro-Factor', go: 'GOORN' };
 export const UR_SOURCES = SOURCE_ORDER.filter(s => s !== 'Krypto'); // krypto není práce

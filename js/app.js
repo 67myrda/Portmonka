@@ -1,8 +1,8 @@
 // Portmonka 08 – UI nad deterministickým jádrem (core.js) a datovou vrstvou (store.js).
-import * as C from './core.js?v=8.9';
-import { createFirestoreStore, createMemoryStore } from './store.js?v=8.9';
-import * as O from './orbit.js?v=8.9';
-import * as U from './uroda.js?v=8.9';
+import * as C from './core.js?v=8.10';
+import { createFirestoreStore, createMemoryStore } from './store.js?v=8.10';
+import * as O from './orbit.js?v=8.10';
+import * as U from './uroda.js?v=8.10';
 
 const DEMO = new URLSearchParams(location.search).has('demo');
 const S = { tab: 'ted', user: null, cases: [], offers: null, uroda: null, urView: 'week', urAnchor: null, urSpan: 6, grp: 'month', collapsed: new Set(), opened: new Set(), loaded: false, filter: 'all', q: '', open: null, incMode: 'month', sel: new Set(), showWhy: false, busy: false, err: null };
@@ -22,8 +22,8 @@ const ICON = {
   reload: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>'
 };
 const MARK = '<svg class="mark" viewBox="0 0 40 40" aria-hidden="true"><rect x="3" y="11" width="34" height="24" rx="8" fill="none" stroke="#5eead4" stroke-width="3"></rect><path d="M11 11 C11 4 29 4 29 11" fill="none" stroke="#b493ff" stroke-width="3" stroke-linecap="round"></path><circle cx="20" cy="23" r="4" fill="#5eead4"></circle><circle cx="31" cy="6" r="2" fill="#f5b84a"></circle></svg>';
-const ELF = (pose = 'klid', size = 96) => `<img class="elfimg" src="img/elf/${pose}.webp?v=8.9" alt="Skřítek Portmonky" width="${size}" height="${size}" loading="lazy">`;
-const SI = (s, sz = 22) => SRC(s).icon ? `<img class="si" src="img/src/${SRC(s).icon}.webp?v=8.9" alt="" width="${sz}" height="${sz}" loading="lazy">` : SRC(s).emoji ? `<span class="si si-e" style="font-size:${Math.round(sz * .8)}px" aria-hidden="true">${SRC(s).emoji}</span>` : '';
+const ELF = (pose = 'klid', size = 96) => `<img class="elfimg" src="img/elf/${pose}.webp?v=8.10" alt="Skřítek Portmonky" width="${size}" height="${size}" loading="lazy">`;
+const SI = (s, sz = 22) => SRC(s).icon ? `<img class="si" src="img/src/${SRC(s).icon}.webp?v=8.10" alt="" width="${sz}" height="${sz}" loading="lazy">` : SRC(s).emoji ? `<span class="si si-e" style="font-size:${Math.round(sz * .8)}px" aria-hidden="true">${SRC(s).emoji}</span>` : '';
 
 function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 2600); }
 
@@ -50,7 +50,7 @@ function header() {
   const tf = [['ted', 'Teď'], ['orbit', 'Orbit'], ['uroda', 'Úroda'], ['prijem', 'Příjem'], ['pripady', 'Případy'], ['souhrn', 'Souhrn']];
   const tx = [['obj', 'Objevitel'], ['lab', 'Laboratoř']];
   return `<header class="top"><div class="top-in">
-    <div class="brand"><img class="logo" src="img/logo-96.webp?v=8.9" alt="" width="44" height="44"><div><b class="wm">Portmonka</b><small>zvědavý účetní skřítek</small></div></div>
+    <div class="brand"><img class="logo" src="img/logo-96.webp?v=8.10" alt="" width="44" height="44"><div><b class="wm">Portmonka</b><small>zvědavý účetní skřítek</small></div></div>
     <nav class="nav" aria-label="Pohledy">
       <div class="ngrp fin" role="group" aria-labelledby="ng-fin"><span class="grp" id="ng-fin">Finance</span><div class="ntabs">${tf.map(t => `<button type="button" class="tab${S.tab === t[0] ? ' on' : ''}" data-a="tab" data-t="${t[0]}">${t[1]}</button>`).join('')}</div></div>
       <div class="ngrp obj" role="group" aria-labelledby="ng-obj"><span class="grp" id="ng-obj">Objevování · připravuju</span><div class="ntabs">${tx.map(t => `<button type="button" class="tab x${S.tab === t[0] ? ' on' : ''}" data-a="tab" data-t="${t[0]}">${t[1]}</button>`).join('')}</div></div></nav>
@@ -63,7 +63,7 @@ function header() {
 function render() {
   const app = $('#app');
   if (!S.user) {
-    app.innerHTML = `<div class="wrap"><section class="login card"><img class="logo big" src="img/logo-96.webp?v=8.9" alt="Logo Portmonky" width="96" height="96">
+    app.innerHTML = `<div class="wrap"><section class="login card"><img class="logo big" src="img/logo-96.webp?v=8.10" alt="Logo Portmonky" width="96" height="96">
       <h1 class="wm">Portmonka</h1><p>Zvědavý účetní skřítek. Přihlas se přes Google, data se ukládají do tvého zabezpečeného prostoru ve Firestore.</p>
       <div class="btns" style="justify-content:center;margin-top:18px"><button type="button" class="btn solid" data-a="login">Přihlásit přes Google</button>
       <a class="btn ghost" href="?demo=1" style="text-decoration:none;display:inline-flex;align-items:center">Prohlédnout s ukázkovými daty</a></div></section></div>`;
@@ -238,11 +238,11 @@ function viewOrbit(I) {
 
 /* ---------------- PŘÍJEM ---------------- */
 function viewPrijem(I) {
-  const T = today(), inc = C.income(I, S.incMode, T), cur = inc.cur;
+  const T = today(), inc = C.income(I, S.incMode, T), sel = S.incSel != null && inc.periods[S.incSel] ? S.incSel : inc.periods.length - 1, cur = inc.periods[sel];
   const pmax = Math.max(1, ...inc.periods.map(p => p.total));
-  const bars = inc.periods.map((p, bi) => `<div class="bar${p.cur ? ' cur' : ''}"><div class="vl">${p.total ? Math.round(p.total / 100000) + ' tis.' : '–'}</div><div class="stack">${C.SOURCE_ORDER.map(s => p.bySrc[s] ? `<div class="seg" style="height:${p.bySrc[s] / pmax * 100}%;background:${SRC(s).color};animation-delay:${bi * .08}s"></div>` : '').join('')}</div><div class="lb">${p.label}</div></div>`).join('');
-  const recent = I.filter(i => i.paidAt && !i.lostAt).sort((a, b) => b.paidAt.localeCompare(a.paidAt)).slice(0, 8);
-  const per = S.incMode === 'week' ? 'tento týden' : S.incMode === 'year' ? 'za rok ' + T.slice(0, 4) : 'za ' + C.monShort(T) + ' ' + T.slice(0, 4);
+  const bars = inc.periods.map((p, bi) => `<div class="bar${bi === sel ? ' cur' : ''}" data-a="inc-pick" data-i="${bi}" role="button" tabindex="0" aria-pressed="${bi === sel}" style="cursor:pointer" title="Ukázat, odkud to přišlo"><div class="vl">${p.total ? Math.round(p.total / 100000) + ' tis.' : '–'}</div><div class="stack">${C.SOURCE_ORDER.map(s => p.bySrc[s] ? `<div class="seg" style="height:${p.bySrc[s] / pmax * 100}%;background:${SRC(s).color};animation-delay:${bi * .08}s"></div>` : '').join('')}</div><div class="lb">${p.label}</div></div>`).join('');
+  const recent = (cur.cur ? I.filter(i => i.paidAt && !i.lostAt) : cur.items).sort((a, b) => b.paidAt.localeCompare(a.paidAt)).slice(0, 8);
+  const per = cur.cur ? (S.incMode === 'week' ? 'tento týden' : S.incMode === 'year' ? 'za rok ' + T.slice(0, 4) : 'za ' + C.monShort(T) + ' ' + T.slice(0, 4)) : (S.incMode === 'week' ? 'týden od ' + cur.label : S.incMode === 'year' ? 'za rok ' + cur.label : 'za ' + cur.label + ' ' + cur.start.slice(0, 4));
   return `<div class="grid g2">
   <section class="card">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
@@ -250,12 +250,12 @@ function viewPrijem(I) {
       <div class="seg2"><button type="button" class="${S.incMode === 'month' ? 'on' : ''}" data-a="inc" data-m="month">Měsíc</button><button type="button" class="${S.incMode === 'week' ? 'on' : ''}" data-a="inc" data-m="week">Týden</button><button type="button" class="${S.incMode === 'year' ? 'on' : ''}" data-a="inc" data-m="year">Rok</button></div>
     </div>
     <div class="bars">${bars}</div>
-    <div class="meta" style="margin-top:8px">Tempo: průměr ${K(inc.avg)} za ${S.incMode === 'week' ? 'týden' : S.incMode === 'year' ? 'rok' : 'měsíc'} (posledních ${S.incMode === 'year' ? 3 : 6} období)</div>
+    <div class="meta" style="margin-top:8px">Ťukni na sloupec a vpravo uvidíš, odkud to přišlo. Tempo: průměr ${K(inc.avg)} za ${S.incMode === 'week' ? 'týden' : S.incMode === 'year' ? 'rok' : 'měsíc'} (posledních ${S.incMode === 'year' ? 3 : 6} období)</div>
   </section>
   <section class="card"><div class="k">Odkud to přišlo · ${per}</div>
     <div class="share">${C.SOURCE_ORDER.map(s => `<i style="width:${cur.total ? cur.bySrc[s] / cur.total * 100 : 0}%;background:${SRC(s).color}"></i>`).join('')}</div>
     ${C.SOURCE_ORDER.filter((s, k) => k < 4 || cur.bySrc[s]).map(s => `<div class="row"><div class="l"><b style="color:${SRC(s).color}">${SI(s, 22)}${SRC(s).name}</b><span>${cur.total ? Math.round(cur.bySrc[s] / cur.total * 100) : 0} %</span></div><span class="mono">${K(cur.bySrc[s])}</span></div>`).join('')}
-    <div class="k" style="margin-top:18px">Poslední platby</div>
+    <div class="k" style="margin-top:18px">${cur.cur ? 'Poslední platby' : 'Platby · ' + per}</div>
     ${recent.length ? recent.map(i => `<div class="row" data-a="open" data-c="${i.caseId}" style="cursor:pointer"><div class="l"><b>${esc(SRC(i.source).name + ' · ' + i.title)}</b><span>${esc(i.label)}${i.kind === 'bonus' ? ' · bonus' : ''} · ${C.fmtDateShort(i.paidAt)}</span></div><span class="mono" style="color:${SRC(i.source).color}">+ ${K(i.amountMinor)}</span></div>`).join('') : '<div class="empty">Zatím žádná proplacená splátka.</div>'}
   </section></div>
   ${viewStats(I, T)}`;
@@ -292,6 +292,15 @@ function caseNext(c, xs, T) {
   if (w) return C.isBlocked(w) ? (c.source === 'Domoveo.cz' ? 'čeká na servis' : 'čeká na podmínku') : 'nárok ' + C.fmtDateShort(w.claimDate);
   const pd = xs.filter(i => i.paidAt).map(i => i.paidAt).sort().pop(); return pd ? 'proplaceno ' + C.fmtDateShort(pd) : '';
 }
+function seedCard(x) {
+  const col = SRC(x.source).color;
+  return `<button type="button" class="case seedc" style="--sc:${col}" data-a="ur-day" data-tab="uroda" data-d="${x.date}" title="Otevřít Semínka toho dne">
+    <span class="src" style="color:${col}">${SI(x.source, 16)}<span>${x.source === 'Pro-Factor' ? 'Inzerát' : 'GOORN · prohlídka'}</span><span class="cd">${x.approx ? '≈ ' : ''}${C.fmtDateShort(x.date)}</span></span>
+    <span class="t">${esc(x.title)}</span>
+    <span class="sbar seed"><i></i></span>
+    <span class="cfoot"><span class="lead" style="color:#9be37a">🌱 klíčí</span><span class="mono">${K(x.amountMinor)}</span></span>
+    <span class="nx">${esc(x.source === 'Pro-Factor' ? (x.note ? x.note + ' · ' : '') + 'čeká na uzavření města' : 'čeká na instalaci')}</span></button>`;
+}
 function caseCard(c, T) {
   const xs = (c.installments || []).map(i => ({ ...i, st: C.status(i, T) })), sts = xs.map(i => i.st), tot = C.sumMinor(xs) || 1, col = SRC(c.source).color;
   return `<button type="button" class="case${S.open === c.id ? ' on' : ''}${C.integrity(c) ? '' : ' bad'}" style="--sc:${col}" data-a="pick" data-c="${c.id}">
@@ -303,10 +312,12 @@ function caseCard(c, T) {
 }
 function viewPripady(I) {
   const T = today(), q = S.q.trim().toLowerCase();
-  const list = S.cases.filter(c => (S.filter === 'all' || c.source === S.filter) && (!q || `${c.title} ${c.source} ${c.note || ''} ${c.externalId || ''}`.toLowerCase().includes(q)))
+  const sd = urSeeds().filter(x => !x.caseId && (x.source === 'Pro-Factor' || x.source === 'GOORN') && x.st !== 'lost')
+    .map(x => ({ id: 'seed:' + x.id, seed: x, source: x.source, title: x.title, triggerDate: x.date, note: x.note, installments: [] }));
+  const list = [...S.cases, ...sd].filter(c => (S.filter === 'all' || c.source === S.filter) && (!q || `${c.title} ${c.source} ${c.note || ''} ${c.externalId || ''}`.toLowerCase().includes(q)))
     .slice().sort((a, b) => String(b.triggerDate || '').localeCompare(String(a.triggerDate || '')));
   if (S.open && !caseById(S.open)) S.open = null;
-  if (!S.open && list[0] && matchMedia('(min-width:1101px)').matches) S.open = list[0].id;
+  if (!S.open && list.find(c => !c.seed) && matchMedia('(min-width:1101px)').matches) S.open = list.find(c => !c.seed).id;
   const filters = [['all', 'Vše'], ...C.SOURCE_ORDER.map(s => [s, SRC(s).name])];
   // skupiny podle data vzniku případu (uzavření města, instalace, podpis objednávky…)
   const wk = S.grp === 'week';
@@ -322,14 +333,15 @@ function viewPripady(I) {
   const label = k => wk ? (k === curKey ? 'Tento týden · ' : '') + C.fmtDateShort(k) + ' – ' + C.fmtDate(C.addDays(k, 6)) : (MONF_[Number(k.slice(5, 7)) - 1] + ' ' + k.slice(0, 4)).replace(/^./, m => m.toUpperCase());
   const body = groups.map((g, gi) => {
     const xs = g.cases.flatMap(c => (c.installments || []).map(i => ({ ...i, st: C.status(i, T) })));
+    const seedSum = g.cases.filter(c => c.seed).reduce((a, c) => a + c.seed.amountMinor, 0), nCase = g.cases.filter(c => !c.seed).length, nSeed = g.cases.length - nCase;
     const by = st => C.sumMinor(xs.filter(i => i.st === st)), tot = C.sumMinor(xs) || 1;
     const shut = q ? false : S.collapsed.has(g.key) ? true : S.opened.has(g.key) ? false : gi >= (wk ? 4 : 3);
     const chips = [['READY', 'lze fakturovat'], ['INVOICED', 'na cestě'], ['WAITING', 'čeká'], ['PAID', 'proplaceno']].filter(([st]) => by(st)).map(([st, l]) => `<span style="color:${C.ST_COLOR[st]}">● ${l} ${K(by(st))}</span>`).join('');
     return `<section class="cgrp${shut ? ' shut' : ''}"><button type="button" class="cgh" data-a="grp-toggle" data-k="${g.key}" aria-expanded="${!shut}">
-      <span class="cgt"><b>${label(g.key)}</b><span class="meta">${g.cases.length} ${plural(g.cases.length, 'případ', 'případy', 'případů')}</span><span class="mono">${K(C.sumMinor(xs))}</span><span class="chev" aria-hidden="true">${shut ? '▸' : '▾'}</span></span>
+      <span class="cgt"><b>${label(g.key)}</b><span class="meta">${nCase ? nCase + ' ' + plural(nCase, 'případ', 'případy', 'případů') : ''}${nCase && nSeed ? ' · ' : ''}${nSeed ? '🌱 ' + nSeed + ' ' + plural(nSeed, 'prodej', 'prodeje', 'prodejů') : ''}</span><span class="mono">${K(C.sumMinor(xs))}</span><span class="chev" aria-hidden="true">${shut ? '▸' : '▾'}</span></span>
       <span class="gbar">${['PAID', 'INVOICED', 'READY', 'WAITING', 'LOST'].map(st => by(st) ? `<i style="width:${by(st) / tot * 100}%;background:${C.ST_COLOR[st]}"></i>` : '').join('')}</span>
-      <span class="gchips">${chips}</span></button>
-      ${shut ? '' : `<div class="cases">${g.cases.map(c => caseCard(c, T)).join('')}</div>`}</section>`;
+      <span class="gchips">${chips}${seedSum ? `<span style="color:#9be37a">🌱 zaseto ${K(seedSum)}</span>` : ''}</span></button>
+      ${shut ? '' : `<div class="cases">${g.cases.map(c => c.seed ? seedCard(c.seed) : caseCard(c, T)).join('')}</div>`}</section>`;
   }).join('');
   return `<div class="grid">
     <div class="tools">${filters.map(f => `<button type="button" class="tab${S.filter === f[0] ? ' on' : ''}" data-a="filter" data-f="${esc(f[0])}">${f[1]}</button>`).join('')}
@@ -690,7 +702,7 @@ function handle(e) {
     case 'tab': S.tab = el.dataset.t; render(); scrollTo(0, 0); break;
     case 'ur-view': S.urView = el.dataset.v; if (S.urView === 'day' && S.urAnchor > today()) S.urAnchor = today(); render(); break;
     case 'ur-span': S.urSpan = el.dataset.s === 'all' ? 'all' : Number(el.dataset.s); render(); break;
-    case 'ur-day': S.urView = 'day'; S.urAnchor = el.dataset.d; render(); break;
+    case 'ur-day': S.urView = 'day'; S.urAnchor = el.dataset.d; if (el.dataset.tab) { S.tab = el.dataset.tab; scrollTo(0, 0); } render(); break;
     case 'ur-month': S.urView = 'month'; S.urAnchor = el.dataset.d; render(); break;
     case 'ur-shift': { const n = Number(el.dataset.d), a = S.urAnchor || today(); S.urAnchor = S.urView === 'day' ? C.addDays(a, n) : S.urView === 'week' ? C.addDays(a, 7 * n) : C.addMonths(C.startOfMonth(a), n); if (S.urAnchor > today()) S.urAnchor = today(); render(); break; }
     case 'login': store.signIn().catch(er => { console.error(er); toast('Přihlášení přes Google se nepodařilo.'); }); break;
@@ -703,7 +715,8 @@ function handle(e) {
     case 'filter': S.filter = el.dataset.f; render(); break;
     case 'grp': S.grp = el.dataset.g; S.collapsed.clear(); S.opened.clear(); render(); break;
     case 'grp-toggle': { const k = el.dataset.k; if (el.getAttribute('aria-expanded') === 'true') { S.collapsed.add(k); S.opened.delete(k); } else { S.opened.add(k); S.collapsed.delete(k); } render(); break; }
-    case 'inc': S.incMode = el.dataset.m; render(); break;
+    case 'inc': S.incMode = el.dataset.m; S.incSel = null; render(); break;
+    case 'inc-pick': S.incSel = Number(el.dataset.i); render(); break;
     case 'sel-all': { const r = I().filter(i => i.st === 'READY'); const all = r.every(i => S.sel.has(i.caseId + '|' + i.id)); S.sel.clear(); if (!all) r.forEach(i => S.sel.add(i.caseId + '|' + i.id)); render(); break; }
     case 'inv-sel': openInvoice(I().filter(i => i.st === 'READY' && S.sel.has(i.caseId + '|' + i.id))); break;
     case 'inv-one': openInvoice([one()]); break;
