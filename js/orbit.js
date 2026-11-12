@@ -1,6 +1,6 @@
 // Portmonka – Orbit: umořování nákladů, polštář, prasátko a sny (fáze 4a, 24. 10. 2026).
 // Deterministické: z případů (příjmy) a konfigurace nákladů. Žádný DOM, žádný Firestore.
-import { addDays, addMonths, startOfMonth, endOfMonth, isIso, sumMinor, status, expectedPayDate, isBlocked, ST } from './core.js?v=8.10';
+import { addDays, addMonths, startOfMonth, endOfMonth, isIso, sumMinor, status, expectedPayDate, expectedClaim, isBlocked, ST, FORECAST_RULE } from './core.js?v=8.11';
 
 const kc = n => Math.round(n * 100);
 
@@ -90,12 +90,14 @@ export const totalCosts = (ym, cfg = ORBIT_DEFAULT) => sumMinor(costsFor(ym, cfg
 // Příjmy měsíce ve vrstvách jistoty. Chiméra nabídek sem nepatří nikdy.
 export function incomeLayers(items, ym, today) {
   const first = ym + '-01', last = endOfMonth(first);
-  const L = { paid: 0, onway: 0, ready: 0, forecast: 0 };
+  const L = { paid: 0, onway: 0, ready: 0, forecast: 0, expect: 0 };
   for (const i of items) {
     if (i.lostAt) continue;
     const st = status(i, today);
     if (st === ST.PAID) { if (i.paidAt >= first && i.paidAt <= last) L.paid += i.amountMinor; continue; }
     if (last < today) continue; // uzavřený měsíc: jen skutečné platby
+    const ec = st === ST.WAITING ? expectedClaim(i) : null;
+    if (ec) { const pd = addDays(ec, FORECAST_RULE.invoiceAfterReady + FORECAST_RULE.payAfterInvoice); if (pd >= first && pd <= last && pd > today) L.expect += i.amountMinor; continue; } // duch: plánovaný servis, nekryje náklady
     const d = expectedPayDate(i, today);
     if (!d || d < first || d > last) continue;
     if (st === ST.INVOICED) L.onway += i.amountMinor;
