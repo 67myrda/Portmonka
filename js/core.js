@@ -215,6 +215,8 @@ export function expectedPayDate(i, today) {
   if (st === ST.WAITING && isIso(i.claimDate) && !isBlocked(i)) return addDays(i.claimDate, FORECAST_RULE.invoiceAfterReady + FORECAST_RULE.payAfterInvoice);
   return null;
 }
+// Domoveo (12. 11. 2026): plánovaný termín servisu → očekávaný podklad. Jen „duch“: nikdy se nepočítá do nároků ani do pokrytí.
+export function expectedClaim(i) { return !i.lostAt && isBlocked(i) && isIso(i.expectedClaimDate) ? i.expectedClaimDate : null; }
 export function forecast(items, today, days) {
   const end = addDays(today, days);
   return sumMinor(items.filter(i => { const d = expectedPayDate(i, today); return d && d <= end; }));
@@ -226,7 +228,8 @@ export function outlook(items, today, months = 6) {
   for (let k = 0; k < months; k++) {
     const s = addMonths(m0, k), e = endOfMonth(s);
     const xs = items.filter(i => status(i, today) === ST.WAITING && !isBlocked(i) && isIso(i.claimDate) && i.claimDate >= s && i.claimDate <= e);
-    out.push({ start: s, label: monShort(s) + ' ' + s.slice(0, 4), total: sumMinor(xs), count: xs.length });
+    const ex = items.filter(i => { const c = expectedClaim(i); return c && c >= s && c <= e && status(i, today) === ST.WAITING; });
+    out.push({ start: s, label: monShort(s) + ' ' + s.slice(0, 4), total: sumMinor(xs), count: xs.length, expect: sumMinor(ex), expectCount: ex.length });
   }
   return out;
 }

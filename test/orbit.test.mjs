@@ -50,3 +50,11 @@ test('Odměny se mění každý měsíc, velké sny z prasátka', () => {
   assert.ok(o.rewards.every(r => r.unlocked));
   assert.ok(o.dreams.every(d => d.ready));
 });
+
+test('Domoveo duch: plánovaný servis je v Orbitu jen jako očekávání, nekryje náklady', () => {
+  const T = '2026-12-05';
+  const it = { id: 'p1', source: 'Domoveo.cz', amountMinor: 501100, blockingCondition: 'Provedení servisu', conditionSatisfiedDate: null, claimDate: null, expectedServiceDate: '2026-11-20', expectedClaimDate: '2026-12-11' };
+  const L = O.incomeLayers([it], '2026-12', T);
+  assert.equal(L.expect, 501100);
+  assert.equal(L.all, 0);
+});

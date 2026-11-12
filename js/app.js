@@ -1,8 +1,8 @@
 // Portmonka 08 – UI nad deterministickým jádrem (core.js) a datovou vrstvou (store.js).
-import * as C from './core.js?v=8.10';
-import { createFirestoreStore, createMemoryStore } from './store.js?v=8.10';
-import * as O from './orbit.js?v=8.10';
-import * as U from './uroda.js?v=8.10';
+import * as C from './core.js?v=8.11';
+import { createFirestoreStore, createMemoryStore } from './store.js?v=8.11';
+import * as O from './orbit.js?v=8.11';
+import * as U from './uroda.js?v=8.11';
 
 const DEMO = new URLSearchParams(location.search).has('demo');
 const S = { tab: 'ted', user: null, cases: [], offers: null, uroda: null, urView: 'week', urAnchor: null, urSpan: 6, grp: 'month', collapsed: new Set(), opened: new Set(), loaded: false, filter: 'all', q: '', open: null, incMode: 'month', sel: new Set(), showWhy: false, busy: false, err: null };
@@ -22,8 +22,8 @@ const ICON = {
   reload: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>'
 };
 const MARK = '<svg class="mark" viewBox="0 0 40 40" aria-hidden="true"><rect x="3" y="11" width="34" height="24" rx="8" fill="none" stroke="#5eead4" stroke-width="3"></rect><path d="M11 11 C11 4 29 4 29 11" fill="none" stroke="#b493ff" stroke-width="3" stroke-linecap="round"></path><circle cx="20" cy="23" r="4" fill="#5eead4"></circle><circle cx="31" cy="6" r="2" fill="#f5b84a"></circle></svg>';
-const ELF = (pose = 'klid', size = 96) => `<img class="elfimg" src="img/elf/${pose}.webp?v=8.10" alt="Skřítek Portmonky" width="${size}" height="${size}" loading="lazy">`;
-const SI = (s, sz = 22) => SRC(s).icon ? `<img class="si" src="img/src/${SRC(s).icon}.webp?v=8.10" alt="" width="${sz}" height="${sz}" loading="lazy">` : SRC(s).emoji ? `<span class="si si-e" style="font-size:${Math.round(sz * .8)}px" aria-hidden="true">${SRC(s).emoji}</span>` : '';
+const ELF = (pose = 'klid', size = 96) => `<img class="elfimg" src="img/elf/${pose}.webp?v=8.11" alt="Skřítek Portmonky" width="${size}" height="${size}" loading="lazy">`;
+const SI = (s, sz = 22) => SRC(s).icon ? `<img class="si" src="img/src/${SRC(s).icon}.webp?v=8.11" alt="" width="${sz}" height="${sz}" loading="lazy">` : SRC(s).emoji ? `<span class="si si-e" style="font-size:${Math.round(sz * .8)}px" aria-hidden="true">${SRC(s).emoji}</span>` : '';
 
 function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 2600); }
 
@@ -50,7 +50,7 @@ function header() {
   const tf = [['ted', 'Teď'], ['orbit', 'Orbit'], ['uroda', 'Úroda'], ['prijem', 'Příjem'], ['pripady', 'Případy'], ['souhrn', 'Souhrn']];
   const tx = [['obj', 'Objevitel'], ['lab', 'Laboratoř']];
   return `<header class="top"><div class="top-in">
-    <div class="brand"><img class="logo" src="img/logo-96.webp?v=8.10" alt="" width="44" height="44"><div><b class="wm">Portmonka</b><small>zvědavý účetní skřítek</small></div></div>
+    <div class="brand"><img class="logo" src="img/logo-96.webp?v=8.11" alt="" width="44" height="44"><div><b class="wm">Portmonka</b><small>zvědavý účetní skřítek</small></div></div>
     <nav class="nav" aria-label="Pohledy">
       <div class="ngrp fin" role="group" aria-labelledby="ng-fin"><span class="grp" id="ng-fin">Finance</span><div class="ntabs">${tf.map(t => `<button type="button" class="tab${S.tab === t[0] ? ' on' : ''}" data-a="tab" data-t="${t[0]}">${t[1]}</button>`).join('')}</div></div>
       <div class="ngrp obj" role="group" aria-labelledby="ng-obj"><span class="grp" id="ng-obj">Objevování · připravuju</span><div class="ntabs">${tx.map(t => `<button type="button" class="tab x${S.tab === t[0] ? ' on' : ''}" data-a="tab" data-t="${t[0]}">${t[1]}</button>`).join('')}</div></div></nav>
@@ -63,7 +63,7 @@ function header() {
 function render() {
   const app = $('#app');
   if (!S.user) {
-    app.innerHTML = `<div class="wrap"><section class="login card"><img class="logo big" src="img/logo-96.webp?v=8.10" alt="Logo Portmonky" width="96" height="96">
+    app.innerHTML = `<div class="wrap"><section class="login card"><img class="logo big" src="img/logo-96.webp?v=8.11" alt="Logo Portmonky" width="96" height="96">
       <h1 class="wm">Portmonka</h1><p>Zvědavý účetní skřítek. Přihlas se přes Google, data se ukládají do tvého zabezpečeného prostoru ve Firestore.</p>
       <div class="btns" style="justify-content:center;margin-top:18px"><button type="button" class="btn solid" data-a="login">Přihlásit přes Google</button>
       <a class="btn ghost" href="?demo=1" style="text-decoration:none;display:inline-flex;align-items:center">Prohlédnout s ukázkovými daty</a></div></section></div>`;
@@ -134,8 +134,8 @@ function viewTed(I) {
   ${timeline(I, T)}
   ${viewOffers(S.offers)}
   <section class="card"><div class="k">Výhled nároků · další měsíce</div>
-    <div class="outl">${C.outlook(I, T).map(o => `<div><span class="meta">${o.label}</span><b>${K(o.total)}</b><span class="meta">${o.count} ${plural(o.count, 'splátka', 'splátky', 'splátek')}</span></div>`).join('')}</div>
-    ${wait.some(C.isBlocked) ? `<div class="meta" style="margin-top:10px">K tomu čeká na podmínku ${K(C.sumMinor(wait.filter(C.isBlocked)))} (2. části GOORN, servis Domovea). Datum zatím neznáme, proto nejsou ve výhledu.</div>` : ''}
+    <div class="outl">${C.outlook(I, T).map(o => `<div><span class="meta">${o.label}</span><b>${K(o.total)}</b><span class="meta">${o.count} ${plural(o.count, 'splátka', 'splátky', 'splátek')}</span>${o.expect ? `<span class="meta" style="color:#c49bff">+ 👻 ${K(o.expect)} · ${o.expectCount} ${plural(o.expectCount, 'servis', 'servisy', 'servisů')} v plánu</span>` : ''}</div>`).join('')}</div>
+    ${wait.some(i => C.isBlocked(i) && !C.expectedClaim(i)) ? `<div class="meta" style="margin-top:10px">👻 = Domoveo zakázky s naplánovaným servisem (přijdou, jen když servis proběhne). K tomu čeká na podmínku bez termínu ${K(C.sumMinor(wait.filter(i => C.isBlocked(i) && !C.expectedClaim(i))))} (2. části GOORN, servisy bez termínu). Datum zatím neznáme, proto nejsou ve výhledu.</div>` : ''}
   </section></div>`;
 }
 // Domoveo: podepsané zakázky, které čekají na servis (Myrda 26. 10. 2026). Tržba s DPH = základ × 1,12 (odhad DPH 12 %).
@@ -211,8 +211,8 @@ function viewOrbit(I) {
     <section class="mission ormis"><div class="k" style="color:#8fd8cc">Orbit · ${C.monShort(T)} ${T.slice(0, 4)}</div>
       <div class="big">${o.pct} %</div>
       <p>nákladů měsíce (${K(o.total)}) pokrývají příjmy · jistě ${o.pctSure} %, s fakturami ${o.pctLikely} %</p>
-      <div class="obar" role="img" aria-label="Pokrytí nákladů ${o.pct} procent"><i class="s" style="width:${pc(L.sure)}%"></i><i class="l" style="width:${pc(L.likely) - pc(L.sure)}%"></i><i class="f" style="width:${pc(L.all) - pc(L.likely)}%"></i></div>
-      <div class="olg"><span><i class="s"></i>na účtu ${K(L.paid)}</span><span><i class="l"></i>na cestě + lze fakturovat ${K(L.onway + L.ready)}</span><span><i class="f"></i>odhad ${K(L.forecast)}</span></div>
+      <div class="obar" role="img" aria-label="Pokrytí nákladů ${o.pct} procent"><i class="s" style="width:${pc(L.sure)}%"></i><i class="l" style="width:${pc(L.likely) - pc(L.sure)}%"></i><i class="f" style="width:${pc(L.all) - pc(L.likely)}%"></i><i class="e" style="width:${Math.max(0, pc(L.all + L.expect) - pc(L.all))}%"></i></div>
+      <div class="olg"><span><i class="s"></i>na účtu ${K(L.paid)}</span><span><i class="l"></i>na cestě + lze fakturovat ${K(L.onway + L.ready)}</span><span><i class="f"></i>odhad ${K(L.forecast)}</span>${L.expect ? `<span><i class="e"></i>duch · plánované servisy Domovea ${K(L.expect)} (nepočítá se)</span>` : ''}</div>
     </section>
     <section class="card"><div class="k">Skřítek hlídá orbit</div>
       <div class="elf" style="margin-top:12px">${ELF(pose, 104)}<div class="bubble"><div class="hl">${esc(hl)}</div><div class="meta">${esc(meta)}</div></div></div></section>

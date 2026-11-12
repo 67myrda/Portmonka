@@ -1,6 +1,6 @@
 // Datová vrstva Portmonky: Firestore (ostrý provoz) a paměťový režim (ukázková data, nic se neukládá).
 // Model: users/{uid}/cases/{caseId}/installments/{id} + users/{uid}/events/{id}
-import { buildInstallments, localToday, addDays, addMonths, GOORN_PART1_MINOR, GOORN_PART2_MINOR, COND_GOORN, COND_DOMOVEO } from './core.js?v=8.10';
+import { buildInstallments, localToday, addDays, addMonths, GOORN_PART1_MINOR, GOORN_PART2_MINOR, COND_GOORN, COND_DOMOVEO } from './core.js?v=8.11';
 
 const FB = 'https://www.gstatic.com/firebasejs/12.19.0/';
 const firebaseConfig = { apiKey: 'AIzaSyAw4mguBLX5RKw0qponSyGEacwiExt4OkI', authDomain: 'portmonka-951967.firebaseapp.com', projectId: 'portmonka-951967', storageBucket: 'portmonka-951967.firebasestorage.app', messagingSenderId: '723477690356', appId: '1:723477690356:web:261e152b2da52251b2ba1' };
@@ -101,7 +101,7 @@ export function createMemoryStore() {
   add('GOORN', 'Pokorná, Úpice', d(-65), {}, i => { i[0].invoicedAt = d(-63); i[0].paidAt = d(-35); i[1].conditionSatisfiedDate = d(-3); i[1].claimDate = d(-3); });
   add('GOORN', 'Svoboda, Broumov', d(-21), {}, i => { i[0].invoicedAt = d(-19); i[0].invoiceNo = '7/26'; });
   const maly = add('GOORN', 'Malý, Nové Město', d(-8), {});
-  add('Domoveo.cz', 'Mačková, Trutnov', d(-4), { domoveo: { kind: 'order', priceNetMinor: 352100, rate: 17 } });
+  add('Domoveo.cz', 'Mačková, Trutnov', d(-4), { domoveo: { kind: 'order', priceNetMinor: 352100, rate: 17 } }, i => { i[0].expectedServiceDate = d(6); i[0].expectedClaimDate = addDays(addMonths(d(6).slice(0, 8) + '01', 1), 10); });
   add('Domoveo.cz', 'Čelišová, Jičín', d(-4), { domoveo: { kind: 'order', priceNetMinor: 980000, rate: 17 } });
   add('Domoveo.cz', 'Ukázka: technik nevpuštěn', d(-15), { domoveo: { kind: 'order', priceNetMinor: 658800, rate: 17 } }, i => { i[0].lostAt = d(-6); i[0].lostReason = 'Klient nepustil technika'; });
   add('Grafika', 'Plakát Jazz Náchod', d(-38), { totalMinor: 850000 }, i => { i[0].invoicedAt = d(-37); });
