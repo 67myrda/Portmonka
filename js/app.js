@@ -1,11 +1,12 @@
 // Portmonka 08 – UI nad deterministickým jádrem (core.js) a datovou vrstvou (store.js).
-import * as C from './core.js?v=8.11';
-import { createFirestoreStore, createMemoryStore } from './store.js?v=8.11';
-import * as O from './orbit.js?v=8.11';
-import * as U from './uroda.js?v=8.11';
+import * as C from './core.js?v=8.12';
+import { createFirestoreStore, createMemoryStore } from './store.js?v=8.12';
+import * as O from './orbit.js?v=8.12';
+import * as U from './uroda.js?v=8.12';
+import * as INV from './invoice.js?v=8.12';
 
 const DEMO = new URLSearchParams(location.search).has('demo');
-const S = { tab: 'ted', user: null, cases: [], offers: null, uroda: null, urView: 'week', urAnchor: null, urSpan: 6, grp: 'month', collapsed: new Set(), opened: new Set(), loaded: false, filter: 'all', q: '', open: null, incMode: 'month', sel: new Set(), showWhy: false, busy: false, err: null };
+const S = { podklady: {}, goornAdresy: {}, invoiceCfg: null, invoices: [], showInvCfg: false, tab: 'ted', user: null, cases: [], offers: null, uroda: null, urView: 'week', urAnchor: null, urSpan: 6, grp: 'month', collapsed: new Set(), opened: new Set(), loaded: false, filter: 'all', q: '', open: null, incMode: 'month', sel: new Set(), showWhy: false, busy: false, err: null };
 let store = null;
 
 const $ = s => document.querySelector(s);
@@ -22,8 +23,8 @@ const ICON = {
   reload: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>'
 };
 const MARK = '<svg class="mark" viewBox="0 0 40 40" aria-hidden="true"><rect x="3" y="11" width="34" height="24" rx="8" fill="none" stroke="#5eead4" stroke-width="3"></rect><path d="M11 11 C11 4 29 4 29 11" fill="none" stroke="#b493ff" stroke-width="3" stroke-linecap="round"></path><circle cx="20" cy="23" r="4" fill="#5eead4"></circle><circle cx="31" cy="6" r="2" fill="#f5b84a"></circle></svg>';
-const ELF = (pose = 'klid', size = 96) => `<img class="elfimg" src="img/elf/${pose}.webp?v=8.11" alt="Skřítek Portmonky" width="${size}" height="${size}" loading="lazy">`;
-const SI = (s, sz = 22) => SRC(s).icon ? `<img class="si" src="img/src/${SRC(s).icon}.webp?v=8.11" alt="" width="${sz}" height="${sz}" loading="lazy">` : SRC(s).emoji ? `<span class="si si-e" style="font-size:${Math.round(sz * .8)}px" aria-hidden="true">${SRC(s).emoji}</span>` : '';
+const ELF = (pose = 'klid', size = 96) => `<img class="elfimg" src="img/elf/${pose}.webp?v=8.12" alt="Skřítek Portmonky" width="${size}" height="${size}" loading="lazy">`;
+const SI = (s, sz = 22) => SRC(s).icon ? `<img class="si" src="img/src/${SRC(s).icon}.webp?v=8.12" alt="" width="${sz}" height="${sz}" loading="lazy">` : SRC(s).emoji ? `<span class="si si-e" style="font-size:${Math.round(sz * .8)}px" aria-hidden="true">${SRC(s).emoji}</span>` : '';
 
 function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 2600); }
 
@@ -32,7 +33,7 @@ function items() { return C.withStatus(C.flatten(S.cases), today()); }
 function caseById(id) { return S.cases.find(c => c.id === id); }
 function instById(cid, iid) { return caseById(cid)?.installments.find(i => i.id === iid); }
 async function reload() {
-  try { const r = await store.load(); S.cases = r.cases; S.offers = r.offers || null; S.uroda = r.uroda || null; S.loaded = true; S.err = null; }
+  try { const r = await store.load(); S.cases = r.cases; S.offers = r.offers || null; S.uroda = r.uroda || null; S.podklady = r.podklady || {}; S.goornAdresy = r.goornAdresy || {}; S.invoiceCfg = r.invoiceCfg || null; S.invoices = r.invoices || []; S.loaded = true; S.err = null; }
   catch (e) { console.error(e); S.err = 'Data se nepodařilo načíst: ' + (e.code || e.message); }
   render();
   const bad = S.cases.filter(c => !C.integrity(c));
@@ -47,10 +48,10 @@ async function run(fn, okMsg) {
 
 /* ---------------- kostra ---------------- */
 function header() {
-  const tf = [['ted', 'Teď'], ['orbit', 'Orbit'], ['uroda', 'Úroda'], ['prijem', 'Příjem'], ['pripady', 'Případy'], ['souhrn', 'Souhrn']];
+  const tf = [['ted', 'Teď'], ['orbit', 'Orbit'], ['uroda', 'Úroda'], ['prijem', 'Příjem'], ['pripady', 'Případy'], ['souhrn', 'Souhrn'], ['faktury', 'Faktury']];
   const tx = [['obj', 'Objevitel'], ['lab', 'Laboratoř']];
   return `<header class="top"><div class="top-in">
-    <div class="brand"><img class="logo" src="img/logo-96.webp?v=8.11" alt="" width="44" height="44"><div><b class="wm">Portmonka</b><small>zvědavý účetní skřítek</small></div></div>
+    <div class="brand"><img class="logo" src="img/logo-96.webp?v=8.12" alt="" width="44" height="44"><div><b class="wm">Portmonka</b><small>zvědavý účetní skřítek</small></div></div>
     <nav class="nav" aria-label="Pohledy">
       <div class="ngrp fin" role="group" aria-labelledby="ng-fin"><span class="grp" id="ng-fin">Finance</span><div class="ntabs">${tf.map(t => `<button type="button" class="tab${S.tab === t[0] ? ' on' : ''}" data-a="tab" data-t="${t[0]}">${t[1]}</button>`).join('')}</div></div>
       <div class="ngrp obj" role="group" aria-labelledby="ng-obj"><span class="grp" id="ng-obj">Objevování · připravuju</span><div class="ntabs">${tx.map(t => `<button type="button" class="tab x${S.tab === t[0] ? ' on' : ''}" data-a="tab" data-t="${t[0]}">${t[1]}</button>`).join('')}</div></div></nav>
@@ -63,7 +64,7 @@ function header() {
 function render() {
   const app = $('#app');
   if (!S.user) {
-    app.innerHTML = `<div class="wrap"><section class="login card"><img class="logo big" src="img/logo-96.webp?v=8.11" alt="Logo Portmonky" width="96" height="96">
+    app.innerHTML = `<div class="wrap"><section class="login card"><img class="logo big" src="img/logo-96.webp?v=8.12" alt="Logo Portmonky" width="96" height="96">
       <h1 class="wm">Portmonka</h1><p>Zvědavý účetní skřítek. Přihlas se přes Google, data se ukládají do tvého zabezpečeného prostoru ve Firestore.</p>
       <div class="btns" style="justify-content:center;margin-top:18px"><button type="button" class="btn solid" data-a="login">Přihlásit přes Google</button>
       <a class="btn ghost" href="?demo=1" style="text-decoration:none;display:inline-flex;align-items:center">Prohlédnout s ukázkovými daty</a></div></section></div>`;
@@ -78,6 +79,7 @@ function render() {
   else if (S.tab === 'souhrn') body = viewSouhrn(I);
   else if (S.tab === 'orbit') body = viewOrbit(I);
   else if (S.tab === 'uroda') body = viewUroda();
+  else if (S.tab === 'faktury') body = viewFaktury(I);
   else body = viewSoon(S.tab);
   app.innerHTML = `<div class="wrap">${header()}${S.err ? `<div class="warnbox" style="margin-bottom:14px">${esc(S.err)}</div>` : ''}${body}
     <div class="foot">Portmonka 08 · ${DEMO ? 'ukázková data, nic se neukládá' : esc(S.user.email)} · Matematika = aplikace, interpretace = Skřítek.</div></div>`;
@@ -105,7 +107,7 @@ function viewTed(I) {
     domoveoTile(I),
     offersTile(S.offers)
   ].filter(Boolean);
-  return `<div class="grid">
+  return `<div class="grid">${invRemindTile(I)}
   <div class="hero">
     <section class="mission"><div class="stars" aria-hidden="true"><i style="left:8%;top:18%"></i><i style="left:72%;top:12%;animation-delay:1s"></i><i style="left:88%;top:62%;animation-delay:2s"></i><i style="left:40%;top:80%;animation-delay:.5s"></i><i style="left:58%;top:30%;animation-delay:1.6s"></i></div>
       <div class="k" style="color:#8fd8cc">Dnešní mise</div>
@@ -507,6 +509,151 @@ function viewUroda() {
     <section class="card"><div class="k">Deník obchodů</div><div class="ufeed">${days.length ? days.slice(0, lim).map(dd => `<div class="uday"><div class="udh"><span>${DNL[dow(dd)]} ${C.fmtDateShort(dd)}</span><b class="mono">${K(byDay[dd].filter(x => x.st !== 'lost').reduce((a, x) => a + x.amountMinor, 0))}</b></div>${byDay[dd].map(urRow).join('')}</div>`).join('') + (days.length > lim ? `<div class="meta" style="text-align:center">… a další ${days.length - lim} ${plural(days.length - lim, 'den', 'dny', 'dní')} – ťukni na sloupec v grafu</div>` : '') : '<div class="empty">Žádné obchody v tomto období.</div>'}</div></section></div>`;
 }
 
+
+/* ---------------- FAKTURY (19. 11. 2026) ---------------- */
+const TAHAK_URL = 'https://tahax67.eu';
+const DM_FIRST_PERIOD = '2026-11'; // říjen 2026 = DMO01/26 vystavena ve Fakturoidu 11. 11.
+const ymAdd = (ym, n) => C.addMonths(ym + '-01', n).slice(0, 7);
+// Podklad za měsíc M → nároky s datem 11. dne M+1 (pravidlo Domovea).
+function dmPodkladItems(I, ym) { const claim = ymAdd(ym, 1) + '-11'; return I.filter(i => i.source === 'Domoveo.cz' && i.claimDate === claim && !i.invoicedAt && !i.lostAt); }
+function dmOpenPodklady(I) {
+  const done = new Set(S.invoices.filter(v => v.cust === 'dm' && v.period).map(v => v.period));
+  return Object.values(S.podklady || {}).filter(p => p && p.mesic && p.mesic >= DM_FIRST_PERIOD && !done.has(p.mesic)).sort((a, b) => a.mesic.localeCompare(b.mesic));
+}
+function goReady(I) { return I.filter(i => i.source === 'GOORN' && i.st === 'READY' && !i.invoicedAt); }
+function invReminders(I) {
+  const out = [];
+  for (const p of dmOpenPodklady(I)) out.push({ cls: 'dm', t: 'Podklad Domovea za ' + INV.monthName(p.mesic) + ' přišel', s: 'K fakturaci ' + K(p.castkaMinor) + ' · vystav fakturu a pošli ji Domoveu' });
+  const g = goReady(I); if (g.length) out.push({ cls: 'go', t: 'GOORN: lze fakturovat ' + g.length + ' ' + plural(g.length, 'položku', 'položky', 'položek'), s: K(C.sumMinor(g)) + ' · faktura s přílohou' });
+  return out;
+}
+function invRemindTile(I) {
+  const r = invReminders(I); if (!r.length) return '';
+  return `<section class="card invrem">${r.map(x => `<div class="row"><div class="l"><b><span class="invdot ${x.cls}"></span>🧾 ${esc(x.t)}</b><span>${esc(x.s)}</span></div><button type="button" class="btn" data-a="tab" data-t="faktury">Faktury</button></div>`).join('')}</section>`;
+}
+function invSupplierPick(cfg) {
+  return cfg.enabledY ? `<div class="f2"><label class="f">Dodavatel<select name="who"><option value="O">${esc(cfg.suppliers.O.name || 'Monika')}</option><option value="Y">${esc(cfg.suppliers.Y.name || 'Myrda')}</option></select></label></div>` : '';
+}
+function invBuildFn(f, base) {
+  return cfg => {
+    const who = (f && val(f, 'who')) || 'O', issued = (f && val(f, 'at')) || today();
+    const sup = cfg.suppliers && cfg.suppliers[who];
+    if (!INV.supplierComplete(sup)) throw new Error('Doplň fakturační údaje dodavatele (' + INV.WHO[who] + ') v Nastavení faktur.');
+    const nn = INV.nextNumber(cfg, base.cust, who, issued);
+    const customer = base.customer || (cfg.customers || {})[base.cust];
+    if (!customer || !customer.name) throw new Error('Chybí údaje odběratele.');
+    const lines = typeof base.lines === 'function' ? base.lines(nn) : base.lines;
+    return { number: nn.number, seriesKey: nn.key, seq: nn.n, yy: nn.yy, vs: nn.vs, cust: base.cust, who, issued, due: INV.addDaysIso(issued, Number(cfg.dueDays) || 7),
+      lines, amountMinor: lines.reduce((a, l) => a + l.amountMinor, 0), qrMsg: base.qrMsg || ('Faktura ' + nn.number), supplier: sup, customer, attachment: base.attachment || null, period: base.period || null };
+  };
+}
+async function invIssue(f, base, items, okMsg) {
+  if (!S.invoiceCfg) throw new Error('Chybí fakturační nastavení.');
+  invBuildFn(f, base)(S.invoiceCfg); // kontrola předem
+  let inv = null;
+  const ok = await run(async () => { inv = await store.issueInvoice(invBuildFn(f, base), items.map(i => ({ caseId: i.caseId, id: i.id }))); }, okMsg);
+  if (ok && inv) INV.openInvoiceWindow(inv);
+}
+function invPreviewNo(cust, who = 'O') { return S.invoiceCfg ? INV.nextNumber(S.invoiceCfg, cust, who, today()).number : '—'; }
+function openDmInvoice(ym) {
+  const I = items(), p = (S.podklady || {})[ym]; if (!p) return;
+  const xs = dmPodkladItems(I, ym), sum = C.sumMinor(xs), diff = p.castkaMinor - sum;
+  modal('Faktura Domoveo', 'Podklad za ' + INV.monthName(ym), `
+    <div class="row"><div class="l"><b>Provize za ${esc(INV.monthName(ym))}</b><span>podklad z e-mailu ${p.prijato ? C.fmtDate(p.prijato) : ''}</span></div><span class="calc">${K(p.castkaMinor)}</span></div>
+    <div class="${diff === 0 ? 'okbox' : 'warnbox'}">${diff === 0 ? '✓ Sedí s Portmonkou (' + xs.length + ' ' + plural(xs.length, 'položka', 'položky', 'položek') + ').' : 'Portmonka má k ' + C.fmtDate(ymAdd(ym, 1) + '-11') + ' ' + K(sum) + ' (' + xs.length + ' položek), podklad ' + K(p.castkaMinor) + '. Rozdíl ' + K(Math.abs(diff)) + '. Fakturuje se částka z podkladu; položky Portmonky se označí jako vyfakturované.'}</div>
+    ${invSupplierPick(S.invoiceCfg)}
+    <div class="f2"><label class="f">Datum vystavení<input name="at" type="date" value="${today()}"></label><label class="f">Číslo faktury<input value="${esc(invPreviewNo('dm'))}" disabled></label></div>
+    <div class="meta">Číslo se přidělí definitivně až po potvrzení. Splatnost 7 dní. Pak se otevře faktura k uložení do PDF.</div>`,
+  f => invIssue(f, { cust: 'dm', lines: [{ text: 'Provize za ' + INV.monthName(ym), amountMinor: p.castkaMinor }], qrMsg: 'Provize ' + INV.monthName(ym), period: ym }, xs, 'Faktura vystavena.'), 'Vystavit fakturu');
+}
+function goAttachmentRows(xs) {
+  return xs.map(i => { const c = caseById(i.caseId) || {}, a = (S.goornAdresy || {})[c.externalId] || {};
+    const part = /2/.test(i.label || '') ? 2 : 1;
+    return { part, jmeno: a.jmeno || String(c.title || '').split(',')[0], adresa: a.adresa || String(c.title || '').split(',').slice(1).join(',').trim(), zakladMinor: Math.round(i.amountMinor / 0.11 / 100) * 100, provizeMinor: i.amountMinor };
+  }).sort((a, b) => a.part - b.part);
+}
+function openGoInvoice() {
+  const xs = goReady(items()); if (!xs.length) return;
+  modal('Faktura GOORN', 'Faktura + příloha s rozpisem zakázek', `
+    ${xs.map(i => `<label class="row chkrow"><input type="checkbox" name="g_${esc(i.caseId)}_${esc(i.id)}" checked><div class="l"><b>${esc(i.title)}</b><span>${esc(i.label)}</span></div><span class="mono">${K(i.amountMinor)}</span></label>`).join('')}
+    ${invSupplierPick(S.invoiceCfg)}
+    <div class="f2"><label class="f">Datum vystavení<input name="at" type="date" value="${today()}"></label><label class="f">Číslo faktury<input value="${esc(invPreviewNo('go'))}" disabled></label></div>
+    <div class="meta">Text: „Na základě obchodní spolupráce Vám fakturujeme dle přílohy č. …“. Příloha se vytvoří ze zaškrtnutých zakázek.</div>`,
+  f => {
+    const sel = xs.filter(i => chk(f, 'g_' + i.caseId + '_' + i.id)); if (!sel.length) throw new Error('Vyber aspoň jednu zakázku.');
+    const att = goAttachmentRows(sel), tot = C.sumMinor(sel);
+    return invIssue(f, { cust: 'go', lines: nn => [{ text: 'Na základě obchodní spolupráce Vám fakturujeme dle přílohy č. ' + nn.number, amountMinor: tot }], attachment: att }, sel, 'Faktura GOORN vystavena.');
+  }, 'Vystavit fakturu');
+}
+function openOsInvoice() {
+  modal('Faktura · ostatní', 'Volná faktura (řada OS)', `
+    <label class="f">Odběratel – název<input name="cn" required></label>
+    <div class="f2"><label class="f">Ulice<input name="cs"></label><label class="f">PSČ a město<input name="cc"></label></div>
+    <div class="f2"><label class="f">IČO<input name="ci" inputmode="numeric"></label><label class="f">DIČ<input name="cd"></label></div>
+    <label class="f">Předmět fakturace<input name="tx" placeholder="např. Grafické práce – návrh letáku"></label>
+    <div class="f2"><label class="f">Částka (Kč)<input name="am" inputmode="decimal"></label><label class="f">Datum vystavení<input name="at" type="date" value="${today()}"></label></div>
+    ${invSupplierPick(S.invoiceCfg)}<div class="meta">Číslo: ${esc(invPreviewNo('os'))} (přidělí se po potvrzení).</div>`,
+  f => {
+    const am = Math.round(Number(val(f, 'am').replace(/\s/g, '').replace(',', '.')) * 100);
+    if (!val(f, 'cn')) throw new Error('Vyplň odběratele.'); if (!val(f, 'tx')) throw new Error('Vyplň předmět fakturace.'); if (!(am > 0)) throw new Error('Zadej částku.');
+    return invIssue(f, { cust: 'os', customer: { name: val(f, 'cn'), street: val(f, 'cs'), city: val(f, 'cc'), ico: val(f, 'ci'), dic: val(f, 'cd') }, lines: [{ text: val(f, 'tx'), amountMinor: am }] }, [], 'Faktura vystavena.');
+  }, 'Vystavit fakturu');
+}
+function invMailLink(v) {
+  const to = (v.customer && v.customer.email) || '';
+  const subj = 'Faktura ' + v.number + (v.period ? ' – provize za ' + INV.monthName(v.period) : '');
+  const body = 'Dobrý den,\n\nv příloze posílám fakturu ' + v.number + ' na částku ' + (v.amountMinor / 100).toLocaleString('cs-CZ') + ' Kč se splatností ' + C.fmtDate(v.due) + '.\n\nDěkuji a přeji hezký den\n' + ((v.supplier && v.supplier.name) || '');
+  return 'mailto:' + encodeURIComponent(to) + '?subject=' + encodeURIComponent(subj) + '&body=' + encodeURIComponent(body);
+}
+function invSettingsForm(cfg) {
+  const c = cfg || { suppliers: { O: {}, Y: {} }, customers: {}, series: {} };
+  const fld = (name, label, v, ph) => `<label class="f">${label}<input name="${name}" value="${esc(v || '')}" placeholder="${esc(ph || '')}"></label>`;
+  const sup = (w, title) => { const x = (c.suppliers || {})[w] || {}; return `<div class="k" style="margin-top:12px">${title}</div>
+    ${fld('s' + w + '_name', 'Jméno', x.name)}<div class="f2">${fld('s' + w + '_street', 'Ulice', x.street)}${fld('s' + w + '_city', 'PSČ a město', x.city)}</div>
+    <div class="f2">${fld('s' + w + '_ico', 'IČO', x.ico)}${fld('s' + w + '_account', 'Číslo účtu', x.account, '2202540688/2010')}</div><div class="f2">${fld('s' + w + '_phone', 'Telefon', x.phone)}${fld('s' + w + '_email', 'E-mail', x.email)}</div>`; };
+  const ser = Object.entries(INV.SERIES_PREFIX).filter(([k]) => k !== 'pf').flatMap(([k, pre]) => ['O', 'Y'].map(w => { const key = pre + w, s = (c.series || {})[key] || {}; return `<label class="f">${key} · další číslo (rok ${esc(s.yy || 26)})<input name="q_${key}" inputmode="numeric" value="${esc(s.next || 1)}"></label>`; })).join('');
+  const cust = (k, t) => { const x = (c.customers || {})[k] || {}; return `<div class="k" style="margin-top:12px">${t}</div>${fld('c' + k + '_name', 'Název', x.name)}<div class="f2">${fld('c' + k + '_street', 'Ulice', x.street)}${fld('c' + k + '_city', 'PSČ a město', x.city)}</div><div class="f2">${fld('c' + k + '_ico', 'IČO', x.ico)}${fld('c' + k + '_dic', 'DIČ', x.dic)}</div>${fld('c' + k + '_email', 'E-mail pro faktury', x.email)}`; };
+  return `${sup('O', '♀️ Monika')}${sup('Y', '♂️ Myrda')}
+    <label class="row chkrow"><input type="checkbox" name="enabledY" ${c.enabledY ? 'checked' : ''}><div class="l"><b>Nabízet i Myrdovy řady (DMY, GOY, OSY)</b><span>Zapni, až bude mít Myrda vlastní smlouvu.</span></div></label>
+    <div class="k" style="margin-top:12px">Číselné řady (Pro-Factor vede Tahák)</div><div class="f2 f3">${ser}</div>
+    ${cust('dm', 'Odběratel Domoveo')}${cust('go', 'Odběratel GOORN')}`;
+}
+function openInvSettings() {
+  modal('Fakturační údaje', 'Nastavení faktur', invSettingsForm(S.invoiceCfg), async f => {
+    const c = JSON.parse(JSON.stringify(S.invoiceCfg || { suppliers: { O: {}, Y: {} }, customers: {}, series: {}, dueDays: 7 }));
+    for (const w of ['O', 'Y']) { c.suppliers[w] = c.suppliers[w] || {}; for (const k of ['name', 'street', 'city', 'ico', 'account', 'phone', 'email']) c.suppliers[w][k] = val(f, 's' + w + '_' + k); }
+    if (!INV.supplierComplete(c.suppliers.O)) throw new Error('Monika: vyplň jméno, ulici, město, IČO a platné číslo účtu.');
+    c.enabledY = chk(f, 'enabledY');
+    if (c.enabledY && !INV.supplierComplete(c.suppliers.Y)) throw new Error('Myrda: pro zapnutí řad vyplň jméno, ulici, město, IČO a číslo účtu.');
+    for (const [k, pre] of Object.entries(INV.SERIES_PREFIX)) { if (k === 'pf') continue; for (const w of ['O', 'Y']) { const key = pre + w, n = parseInt(val(f, 'q_' + key), 10); if (!(n >= 1)) throw new Error('Řada ' + key + ': zadej další číslo (1 a víc).'); c.series[key] = { yy: (c.series[key] || {}).yy || Number(today().slice(2, 4)), next: n }; } }
+    c.customers = c.customers || {};
+    for (const k of ['dm', 'go']) { c.customers[k] = c.customers[k] || {}; for (const x of ['name', 'street', 'city', 'ico', 'dic', 'email']) c.customers[k][x] = val(f, 'c' + k + '_' + x); }
+    await run(() => store.saveInvoiceConfig(c), 'Fakturační údaje uloženy.');
+  }, 'Uložit');
+}
+function viewFaktury(I) {
+  const cfg = S.invoiceCfg, ok = cfg && INV.supplierComplete((cfg.suppliers || {}).O);
+  const pods = dmOpenPodklady(I), go = goReady(I);
+  const last = Object.keys(S.podklady || {}).sort().pop();
+  const dmCard = `<section class="card invc dm"><div class="k">Domoveo · podklad k fakturaci</div>
+    ${pods.length ? pods.map(p => { const xs = dmPodkladItems(I, p.mesic), sum = C.sumMinor(xs); return `<div class="row"><div class="l"><b>Provize za ${esc(INV.monthName(p.mesic))}</b><span>podklad z e-mailu ${p.prijato ? C.fmtDate(p.prijato) : ''} · Portmonka ${K(sum)} ${sum === p.castkaMinor ? '✓' : '⚠ nesedí'}</span></div><span class="mono">${K(p.castkaMinor)}</span><button type="button" class="btn solid" data-a="inv-dm" data-m="${p.mesic}" ${ok ? '' : 'disabled'}>Vystavit ${esc(invPreviewNo('dm'))}</button></div>`; }).join('')
+      : `<div class="meta" style="margin-top:8px">Žádný podklad nečeká. Chodí 11. ráno na domoveo.mm; ranní úloha ho sem přenese${last ? ' (poslední: ' + esc(INV.monthName(last)) + ', vyfakturováno)' : ''}.</div>`}</section>`;
+  const goCard = `<section class="card invc go"><div class="k">GOORN · faktura s přílohou</div>
+    ${go.length ? `<div class="row"><div class="l"><b>${go.length} ${plural(go.length, 'položka', 'položky', 'položek')} lze fakturovat</b><span>${esc(go.map(i => i.title.split(',')[0] + ' (' + i.label + ')').join(', '))}</span></div><span class="mono">${K(C.sumMinor(go))}</span><button type="button" class="btn solid" data-a="inv-go" ${ok ? '' : 'disabled'}>Vystavit ${esc(invPreviewNo('go'))}</button></div>` : '<div class="meta" style="margin-top:8px">Teď není co fakturovat (zimní pauza).</div>'}</section>`;
+  const osCard = `<section class="card invc os"><div class="k">Ostatní</div><div class="row"><div class="l"><b>Volná faktura</b><span>vlastní odběratel, text a částka · řada OSO${cfg && cfg.enabledY ? ' / OSY' : ''}</span></div><button type="button" class="btn" data-a="inv-os" ${ok ? '' : 'disabled'}>Nová faktura</button></div></section>`;
+  const pfCard = `<section class="card invc pf"><div class="k">Pro-Factor</div><div class="row"><div class="l"><b>Faktury Pro-Factor vystavuje Tahák</b><span>řady PFO/PFY vede jen Tahák, ať se čísla nikdy nezdvojí</span></div><a class="btn" href="${TAHAK_URL}" target="_blank" rel="noopener">Otevřít Tahák</a></div></section>`;
+  const list = S.invoices.length ? S.invoices.map(v => `<div class="row"><div class="l"><b><span class="invdot ${esc(v.cust)}"></span>${esc(v.number)} · ${esc((v.customer || {}).name || '')}</b><span>vystaveno ${C.fmtDate(v.issued)} · splatnost ${C.fmtDate(v.due)}${v.period ? ' · za ' + esc(INV.monthName(v.period)) : ''}</span></div><span class="mono">${K(v.amountMinor)}</span>
+      <div class="btns"><button type="button" class="btn" data-a="inv-open" data-i="${esc(v.id)}">PDF</button>${(v.customer || {}).email ? `<a class="btn ghost" href="${invMailLink(v)}">E-mail</a>` : ''}</div></div>`).join('') : '<div class="meta">Zatím žádná faktura z Portmonky.</div>';
+  return `<div class="grid">
+    ${ok ? '' : `<section class="card"><div class="warnbox">Chybí fakturační údaje. <button type="button" class="btn solid" data-a="inv-cfg">Vyplnit</button></div></section>`}
+    <div class="split2">${dmCard}${goCard}</div>
+    <div class="split2">${osCard}${pfCard}</div>
+    <section class="card"><div class="k">Vystavené faktury</div>${list}
+      <div class="meta" style="margin-top:10px">PDF: v okně faktury ťukni „Tisk / Uložit jako PDF“ a pak Sdílet → Disk (účet podle odběratele).</div></section>
+    <section class="card"><div class="row"><div class="l"><b>Fakturační údaje a řady</b><span>dodavatelé, odběratelé, další čísla faktur</span></div><button type="button" class="btn ghost" data-a="inv-cfg">Upravit</button></div></section>
+  </div>`;
+}
+
 /* ---------------- modály ---------------- */
 function modal(title, eyebrow, inner, onSubmit, submitLabel = 'Uložit') {
   const bg = document.createElement('div'); bg.className = 'modal-bg';
@@ -713,6 +860,11 @@ function handle(e) {
     case 'open': S.tab = 'pripady'; S.open = cid; S.filter = 'all'; render(); scrollTo(0, 0); break;
     case 'pick': S.open = cid; render(); if (!matchMedia('(min-width:1101px)').matches) $('#detail')?.scrollIntoView({ behavior: 'smooth' }); break;
     case 'filter': S.filter = el.dataset.f; render(); break;
+    case 'inv-dm': openDmInvoice(el.dataset.m); break;
+    case 'inv-go': openGoInvoice(); break;
+    case 'inv-os': openOsInvoice(); break;
+    case 'inv-cfg': openInvSettings(); break;
+    case 'inv-open': { const v = S.invoices.find(x => x.id === el.dataset.i); if (v) INV.openInvoiceWindow(v); break; }
     case 'grp': S.grp = el.dataset.g; S.collapsed.clear(); S.opened.clear(); render(); break;
     case 'grp-toggle': { const k = el.dataset.k; if (el.getAttribute('aria-expanded') === 'true') { S.collapsed.add(k); S.opened.delete(k); } else { S.opened.add(k); S.collapsed.delete(k); } render(); break; }
     case 'inc': S.incMode = el.dataset.m; S.incSel = null; render(); break;

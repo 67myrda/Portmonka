@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// Portmonka – pravidla Firestore (fáze 2c, 23. 10. 2026: + zdroje Krypto a Hravé dřevo)
+// Portmonka – pravidla Firestore (fáze 2c, 23. 10. 2026: + zdroje Krypto a Hravé dřevo; 19. 11. 2026: faktury, nastavení, pole z Domovea)
 // Každý vidí jen svá data a zápis musí mít správný tvar.
 // Kompatibilní se staršími dokumenty z CORE (pole jako expectedPaymentDate zůstávají povolená).
 
@@ -16,7 +16,7 @@ service cloud.firestore {
     function validCase(d) {
       return d.keys().hasOnly(['financeSpaceId', 'source', 'title', 'triggerDate', 'triggerType', 'kind',
                                'totalAmountMinor', 'currency', 'clientName', 'note', 'externalId', 'rate',
-                               'priceNetMinor', 'createdAt', 'updatedAt'])
+                               'priceNetMinor', 'createdAt', 'updatedAt', 'visitDate', 'meetings'])
         && d.source in ['Pro-Factor', 'GOORN', 'Domoveo.cz', 'Grafika', 'Krypto', 'Hravé dřevo']
         && d.title is string && d.title.size() > 0 && d.title.size() <= 200
         && isDate(opt(d, 'triggerDate'))
@@ -31,7 +31,8 @@ service cloud.firestore {
     function validInst(d) {
       return d.keys().hasOnly(['label', 'kind', 'amountMinor', 'claimDate', 'blockingCondition',
                                'conditionSatisfiedDate', 'invoiceEligibleDate', 'invoicedAt', 'invoiceId',
-                               'invoiceNo', 'expectedPaymentDate', 'paidAt', 'lostAt', 'lostReason', 'updatedAt'])
+                               'invoiceNo', 'expectedPaymentDate', 'paidAt', 'lostAt', 'lostReason', 'updatedAt',
+                               'expectedServiceDate', 'expectedClaimDate'])
         && isText(opt(d, 'label'), 120)
         && (opt(d, 'kind') == null || opt(d, 'kind') in ['commission', 'bonus'])
         && isMoney(d.amountMinor)
@@ -57,6 +58,22 @@ service cloud.firestore {
           allow read, delete: if owner(userId);
           allow create, update: if owner(userId) && validInst(request.resource.data);
         }
+      }
+
+      // fakturační nastavení (dodavatelé, odběratelé, číselné řady)
+      match /config/{docId} {
+        allow read, write: if owner(userId);
+      }
+
+      // vystavené faktury: číslo se po vystavení nemění a faktura se nikdy nemaže
+      match /invoices/{invoiceId} {
+        allow read: if owner(userId);
+        allow create: if owner(userId)
+          && request.resource.data.number is string && request.resource.data.number.size() <= 20
+          && isMoney(request.resource.data.amountMinor)
+          && isDate(request.resource.data.issued) && isDate(request.resource.data.due);
+        allow update: if owner(userId) && request.resource.data.number == resource.data.number;
+        allow delete: if false;
       }
 
       // auditní deník: jen přidávat, nikdy měnit ani mazat
