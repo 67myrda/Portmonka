@@ -311,3 +311,11 @@ a{color:var(--mint)}
 
 .obar i.e{background:repeating-linear-gradient(90deg,rgba(196,155,255,.55) 0 3px,transparent 3px 7px);box-shadow:inset 0 0 0 1px rgba(196,155,255,.5)}
 .olg i.e{background:repeating-linear-gradient(90deg,rgba(196,155,255,.7) 0 2px,transparent 2px 4px)}
+/* Faktury (v8.12) */
+.invc{border-left:5px solid var(--ic,#888)}.invc.dm{--ic:#3b6bb0}.invc.go{--ic:#7fd08f}.invc.pf{--ic:#f59a3c}.invc.os{--ic:#ffd54a}
+.invc .row{flex-wrap:wrap}
+.invdot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:7px;vertical-align:0;background:#888}.invdot.dm{background:#3b6bb0}.invdot.go{background:#7fd08f}.invdot.pf{background:#f59a3c}.invdot.os{background:#ffd54a}
+.invrem{border:1px solid rgba(245,184,74,.45);background:linear-gradient(135deg,rgba(245,184,74,.10),transparent 60%)}
+.okbox{margin:10px 0;padding:10px 12px;border-radius:12px;background:rgba(94,234,212,.10);border:1px solid rgba(94,234,212,.35);font-size:13px}
+.chkrow{cursor:pointer;gap:10px}.chkrow input{width:20px;height:20px;flex:none;accent-color:#5eead4}
+.f2.f3{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}

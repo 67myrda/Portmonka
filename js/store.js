@@ -1,6 +1,6 @@
 // Datová vrstva Portmonky: Firestore (ostrý provoz) a paměťový režim (ukázková data, nic se neukládá).
 // Model: users/{uid}/cases/{caseId}/installments/{id} + users/{uid}/events/{id}
-import { buildInstallments, localToday, addDays, addMonths, GOORN_PART1_MINOR, GOORN_PART2_MINOR, COND_GOORN, COND_DOMOVEO } from './core.js?v=8.11';
+import { buildInstallments, localToday, addDays, addMonths, GOORN_PART1_MINOR, GOORN_PART2_MINOR, COND_GOORN, COND_DOMOVEO } from './core.js?v=8.12';
 
 const FB = 'https://www.gstatic.com/firebasejs/12.19.0/';
 const firebaseConfig = { apiKey: 'AIzaSyAw4mguBLX5RKw0qponSyGEacwiExt4OkI', authDomain: 'portmonka-951967.firebaseapp.com', projectId: 'portmonka-951967', storageBucket: 'portmonka-951967.firebasestorage.app', messagingSenderId: '723477690356', appId: '1:723477690356:web:261e152b2da52251b2ba1' };
@@ -34,9 +34,11 @@ export async function createFirestoreStore() {
         const is = await F.getDocs(instCol(d.id));
         return { id: d.id, ...d.data(), installments: is.docs.map(z => ({ id: z.id, ...z.data() })) };
       }));
-      let offers = null, uroda = null;
-      try { const u = await F.getDoc(F.doc(db, 'users', user.uid)); if (u.exists()) { offers = u.data().domoveoNabidky || null; uroda = u.data().uroda || null; } } catch (e) { console.warn('chiméra nabídek / úroda', e); }
-      return { cases, offers, uroda };
+      let offers = null, uroda = null, podklady = {}, goornAdresy = {}, invoiceCfg = null, invoices = [];
+      try { const u = await F.getDoc(F.doc(db, 'users', user.uid)); if (u.exists()) { const x = u.data(); offers = x.domoveoNabidky || null; uroda = x.uroda || null; podklady = x.domoveoPodklady || {}; goornAdresy = x.goornAdresy || {}; } } catch (e) { console.warn('chiméra nabídek / úroda', e); }
+      try { const c = await F.getDoc(F.doc(db, 'users', user.uid, 'config', 'invoice')); invoiceCfg = c.exists() ? c.data() : null; } catch (e) { console.warn('fakturační nastavení', e); }
+      try { const q = await F.getDocs(F.collection(db, 'users', user.uid, 'invoices')); invoices = q.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => String(b.issued).localeCompare(String(a.issued)) || String(b.number).localeCompare(String(a.number))); } catch (e) { console.warn('faktury', e); }
+      return { cases, offers, uroda, podklady, goornAdresy, invoiceCfg, invoices };
     },
     async createCase(c, insts) {
       const cRef = F.doc(casesCol()), b = F.writeBatch(db);
@@ -64,6 +66,20 @@ export async function createFirestoreStore() {
       for (const it of items) { b.update(F.doc(instCol(it.caseId), it.id), { invoicedAt: inv.issuedAt, invoiceId: id, invoiceNo: inv.number || null, updatedAt: F.serverTimestamp() }); ev(b, 'INSTALLMENT_INVOICED', it.caseId, it.id, { invoiceId: id, invoiceNo: inv.number || null }); }
       await b.commit(); return id;
     },
+    // Vystavení faktury s číslem z řady (transakce: číslo se nikdy nepoužije dvakrát). build(cfg) vrátí hotovou fakturu.
+    async issueInvoice(build, items) {
+      const cfgRef = F.doc(db, 'users', user.uid, 'config', 'invoice'), invRef = F.doc(F.collection(db, 'users', user.uid, 'invoices'));
+      return F.runTransaction(db, async tx => {
+        const c = await tx.get(cfgRef); if (!c.exists()) throw new Error('Chybí fakturační nastavení.');
+        const cfg = c.data(), inv = build(cfg);
+        tx.set(invRef, { ...inv, createdAt: F.serverTimestamp() });
+        tx.update(cfgRef, { ['series.' + inv.seriesKey]: { yy: inv.yy, next: inv.seq + 1 } });
+        for (const it of items) tx.update(F.doc(instCol(it.caseId), it.id), { invoicedAt: inv.issued, invoiceId: invRef.id, invoiceNo: inv.number, updatedAt: F.serverTimestamp() });
+        tx.set(F.doc(evCol()), { type: 'INVOICE_ISSUED', caseId: null, installmentId: null, actorUid: user.uid, occurredAt: F.serverTimestamp(), detail: { invoiceId: invRef.id, number: inv.number, amountMinor: inv.amountMinor } });
+        return { ...inv, id: invRef.id };
+      });
+    },
+    async saveInvoiceConfig(cfg) { await F.setDoc(F.doc(db, 'users', user.uid, 'config', 'invoice'), cfg); },
     async payItems(items, paidAt) {
       const b = F.writeBatch(db);
       for (const it of items) { b.update(F.doc(instCol(it.caseId), it.id), { paidAt, updatedAt: F.serverTimestamp() }); ev(b, 'INSTALLMENT_PAID', it.caseId, it.id); }
@@ -122,13 +138,22 @@ export function createMemoryStore() {
   urSeeds.push({ id: 'go_demo2', s: 'go', d: d(-1), c: 572000, t: 'Ukázka Hakl, Benešov', n: 'celá provize · 1. část po instalaci, 2. část za ~10 měsíců' });
   urSeeds.push({ id: 'go_demo3', s: 'go', d: d(-30), c: 572000, t: 'Ukázka zrušená realizace', n: 'zákazník odstoupil', l: d(-20) });
   const uroda = { asOf: T, seeds: urSeeds };
+  const invoiceCfg = { suppliers: { O: { name: 'Monika Ukázková', street: 'Ukázková 1', city: '547 01 Náchod', ico: '12345678', account: '2202540688/2010', phone: '777 000 111', email: 'ukazka@example.cz' }, Y: { name: 'Myrda Ukázkový', street: 'Ukázková 1', city: '547 01 Náchod', ico: '87654321', account: '2302617865/2010' } }, enabledY: false,
+    customers: { dm: { name: 'Domoveo s.r.o.', street: 'Jandova 598/1', city: '190 00 Praha 9 – Vysočany', ico: '10932585', dic: 'CZ10932585', email: 'vedeni@domoveo.cz' }, go: { name: 'GOORN s.r.o.', street: '1. máje 35', city: '798 26 Nezamyslice', ico: '19949707', dic: 'CZ19949707' }, pf: { name: 'PRO-FACTOR cz, s.r.o.', street: 'Revoluční 62', city: '544 01 Dvůr Králové nad Labem', ico: '26013509', dic: 'CZ26013509' } },
+    series: { DMO: { yy: 26, next: 2 }, GOO: { yy: 26, next: 10 }, OSO: { yy: 26, next: 1 }, DMY: { yy: 26, next: 1 }, GOY: { yy: 26, next: 1 }, OSY: { yy: 26, next: 1 } }, dueDays: 7 };
+  const invoices = [];
+  const pm = T.slice(0, 7), prevYm = addMonths(T.slice(0, 7) + '-01', -1).slice(0, 7);
+  const podklady = { [pm]: { mesic: pm, castkaMinor: 593200, prijato: T.slice(0, 8) + '11', predmet: 'Podklad k fakturaci (ukázka)' } };
+  const goornAdresy = {};
   const find = (cid, id) => cases.find(c => c.id === cid)?.installments.find(i => i.id === id);
   const clone = x => JSON.parse(JSON.stringify(x));
   return {
     mode: 'memory',
     onAuth(cb) { setTimeout(() => cb({ email: 'ukázková data', uid: 'demo' }), 0); },
     signIn() {}, signOut() { location.search = ''; },
-    async load() { return { cases: clone(cases), offers: clone(offers), uroda: clone(uroda) }; },
+    async load() { return { cases: clone(cases), offers: clone(offers), uroda: clone(uroda), podklady: clone(podklady), goornAdresy: clone(goornAdresy), invoiceCfg: clone(invoiceCfg), invoices: clone(invoices) }; },
+    async issueInvoice(build, items) { const inv = build(clone(invoiceCfg)), id = uid(); invoiceCfg.series[inv.seriesKey] = { yy: inv.yy, next: inv.seq + 1 }; invoices.unshift({ ...inv, id }); for (const it of items) Object.assign(find(it.caseId, it.id), { invoicedAt: inv.issued, invoiceId: id, invoiceNo: inv.number }); return { ...inv, id }; },
+    async saveInvoiceConfig(cfg) { Object.assign(invoiceCfg, clone(cfg)); },
     async createCase(c, insts) { const id = uid(); cases.unshift({ ...c, id, createdAt: T, installments: insts.map(i => ({ ...pickInst(i), id: uid() })) }); return id; },
     async updateCase(caseId, patch, changes) {
       const c = cases.find(x => x.id === caseId); if (!c) throw new Error('Případ nenalezen');
