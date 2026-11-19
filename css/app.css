@@ -319,3 +319,10 @@ a{color:var(--mint)}
 .okbox{margin:10px 0;padding:10px 12px;border-radius:12px;background:rgba(94,234,212,.10);border:1px solid rgba(94,234,212,.35);font-size:13px}
 .chkrow{cursor:pointer;gap:10px}.chkrow input{width:20px;height:20px;flex:none;accent-color:#5eead4}
 .f2.f3{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+
+/* Domoveo přehled (v8.13): tři dlaždice vedle sebe i na mobilu */
+.dmtiles{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.dmtiles .usrc{padding:10px 10px}
+.dmtiles .usrc b{font-size:12px}
+.dmtiles .usrc .v{font-size:15px;overflow-wrap:anywhere}
+.dmtiles .usrc .meta{font-size:11px;line-height:1.3}

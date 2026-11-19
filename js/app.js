@@ -1,12 +1,13 @@
 // Portmonka 08 – UI nad deterministickým jádrem (core.js) a datovou vrstvou (store.js).
-import * as C from './core.js?v=8.12';
-import { createFirestoreStore, createMemoryStore } from './store.js?v=8.12';
-import * as O from './orbit.js?v=8.12';
-import * as U from './uroda.js?v=8.12';
-import * as INV from './invoice.js?v=8.12';
+import * as C from './core.js?v=8.13';
+import { createFirestoreStore, createMemoryStore } from './store.js?v=8.13';
+import * as O from './orbit.js?v=8.13';
+import * as U from './uroda.js?v=8.13';
+import * as DM from './domoveo.js?v=8.13';
+import * as INV from './invoice.js?v=8.13';
 
 const DEMO = new URLSearchParams(location.search).has('demo');
-const S = { podklady: {}, goornAdresy: {}, invoiceCfg: null, invoices: [], showInvCfg: false, tab: 'ted', user: null, cases: [], offers: null, uroda: null, urView: 'week', urAnchor: null, urSpan: 6, grp: 'month', collapsed: new Set(), opened: new Set(), loaded: false, filter: 'all', q: '', open: null, incMode: 'month', sel: new Set(), showWhy: false, busy: false, err: null };
+const S = { podklady: {}, goornAdresy: {}, invoiceCfg: null, invoices: [], showInvCfg: false, tab: 'ted', user: null, cases: [], offers: null, uroda: null, schuzky: null, dmView: 'week', dmAnchor: null, urView: 'week', urAnchor: null, urSpan: 6, grp: 'month', collapsed: new Set(), opened: new Set(), loaded: false, filter: 'all', q: '', open: null, incMode: 'month', sel: new Set(), showWhy: false, busy: false, err: null };
 let store = null;
 
 const $ = s => document.querySelector(s);
@@ -23,8 +24,8 @@ const ICON = {
   reload: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>'
 };
 const MARK = '<svg class="mark" viewBox="0 0 40 40" aria-hidden="true"><rect x="3" y="11" width="34" height="24" rx="8" fill="none" stroke="#5eead4" stroke-width="3"></rect><path d="M11 11 C11 4 29 4 29 11" fill="none" stroke="#b493ff" stroke-width="3" stroke-linecap="round"></path><circle cx="20" cy="23" r="4" fill="#5eead4"></circle><circle cx="31" cy="6" r="2" fill="#f5b84a"></circle></svg>';
-const ELF = (pose = 'klid', size = 96) => `<img class="elfimg" src="img/elf/${pose}.webp?v=8.12" alt="Skřítek Portmonky" width="${size}" height="${size}" loading="lazy">`;
-const SI = (s, sz = 22) => SRC(s).icon ? `<img class="si" src="img/src/${SRC(s).icon}.webp?v=8.12" alt="" width="${sz}" height="${sz}" loading="lazy">` : SRC(s).emoji ? `<span class="si si-e" style="font-size:${Math.round(sz * .8)}px" aria-hidden="true">${SRC(s).emoji}</span>` : '';
+const ELF = (pose = 'klid', size = 96) => `<img class="elfimg" src="img/elf/${pose}.webp?v=8.13" alt="Skřítek Portmonky" width="${size}" height="${size}" loading="lazy">`;
+const SI = (s, sz = 22) => SRC(s).icon ? `<img class="si" src="img/src/${SRC(s).icon}.webp?v=8.13" alt="" width="${sz}" height="${sz}" loading="lazy">` : SRC(s).emoji ? `<span class="si si-e" style="font-size:${Math.round(sz * .8)}px" aria-hidden="true">${SRC(s).emoji}</span>` : '';
 
 function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 2600); }
 
@@ -33,7 +34,7 @@ function items() { return C.withStatus(C.flatten(S.cases), today()); }
 function caseById(id) { return S.cases.find(c => c.id === id); }
 function instById(cid, iid) { return caseById(cid)?.installments.find(i => i.id === iid); }
 async function reload() {
-  try { const r = await store.load(); S.cases = r.cases; S.offers = r.offers || null; S.uroda = r.uroda || null; S.podklady = r.podklady || {}; S.goornAdresy = r.goornAdresy || {}; S.invoiceCfg = r.invoiceCfg || null; S.invoices = r.invoices || []; S.loaded = true; S.err = null; }
+  try { const r = await store.load(); S.cases = r.cases; S.offers = r.offers || null; S.uroda = r.uroda || null; S.schuzky = r.schuzky || null; S.podklady = r.podklady || {}; S.goornAdresy = r.goornAdresy || {}; S.invoiceCfg = r.invoiceCfg || null; S.invoices = r.invoices || []; S.loaded = true; S.err = null; }
   catch (e) { console.error(e); S.err = 'Data se nepodařilo načíst: ' + (e.code || e.message); }
   render();
   const bad = S.cases.filter(c => !C.integrity(c));
@@ -48,10 +49,10 @@ async function run(fn, okMsg) {
 
 /* ---------------- kostra ---------------- */
 function header() {
-  const tf = [['ted', 'Teď'], ['orbit', 'Orbit'], ['uroda', 'Úroda'], ['prijem', 'Příjem'], ['pripady', 'Případy'], ['souhrn', 'Souhrn'], ['faktury', 'Faktury']];
+  const tf = [['ted', 'Teď'], ['orbit', 'Orbit'], ['uroda', 'Úroda'], ['domoveo', 'Domoveo'], ['prijem', 'Příjem'], ['pripady', 'Případy'], ['souhrn', 'Souhrn'], ['faktury', 'Faktury']];
   const tx = [['obj', 'Objevitel'], ['lab', 'Laboratoř']];
   return `<header class="top"><div class="top-in">
-    <div class="brand"><img class="logo" src="img/logo-96.webp?v=8.12" alt="" width="44" height="44"><div><b class="wm">Portmonka</b><small>zvědavý účetní skřítek</small></div></div>
+    <div class="brand"><img class="logo" src="img/logo-96.webp?v=8.13" alt="" width="44" height="44"><div><b class="wm">Portmonka</b><small>zvědavý účetní skřítek</small></div></div>
     <nav class="nav" aria-label="Pohledy">
       <div class="ngrp fin" role="group" aria-labelledby="ng-fin"><span class="grp" id="ng-fin">Finance</span><div class="ntabs">${tf.map(t => `<button type="button" class="tab${S.tab === t[0] ? ' on' : ''}" data-a="tab" data-t="${t[0]}">${t[1]}</button>`).join('')}</div></div>
       <div class="ngrp obj" role="group" aria-labelledby="ng-obj"><span class="grp" id="ng-obj">Objevování · připravuju</span><div class="ntabs">${tx.map(t => `<button type="button" class="tab x${S.tab === t[0] ? ' on' : ''}" data-a="tab" data-t="${t[0]}">${t[1]}</button>`).join('')}</div></div></nav>
@@ -64,7 +65,7 @@ function header() {
 function render() {
   const app = $('#app');
   if (!S.user) {
-    app.innerHTML = `<div class="wrap"><section class="login card"><img class="logo big" src="img/logo-96.webp?v=8.12" alt="Logo Portmonky" width="96" height="96">
+    app.innerHTML = `<div class="wrap"><section class="login card"><img class="logo big" src="img/logo-96.webp?v=8.13" alt="Logo Portmonky" width="96" height="96">
       <h1 class="wm">Portmonka</h1><p>Zvědavý účetní skřítek. Přihlas se přes Google, data se ukládají do tvého zabezpečeného prostoru ve Firestore.</p>
       <div class="btns" style="justify-content:center;margin-top:18px"><button type="button" class="btn solid" data-a="login">Přihlásit přes Google</button>
       <a class="btn ghost" href="?demo=1" style="text-decoration:none;display:inline-flex;align-items:center">Prohlédnout s ukázkovými daty</a></div></section></div>`;
@@ -79,6 +80,7 @@ function render() {
   else if (S.tab === 'souhrn') body = viewSouhrn(I);
   else if (S.tab === 'orbit') body = viewOrbit(I);
   else if (S.tab === 'uroda') body = viewUroda();
+  else if (S.tab === 'domoveo') body = viewDomoveo();
   else if (S.tab === 'faktury') body = viewFaktury(I);
   else body = viewSoon(S.tab);
   app.innerHTML = `<div class="wrap">${header()}${S.err ? `<div class="warnbox" style="margin-bottom:14px">${esc(S.err)}</div>` : ''}${body}
@@ -510,6 +512,67 @@ function viewUroda() {
 }
 
 
+/* ---------------- DOMOVEO PŘEHLED MARŽÍ (20. 11. 2026) ---------------- */
+const DM_VIEWS = [['day', 'Den'], ['week', 'Týden'], ['month', 'Měsíc']];
+const DM_COL = { signed: '#5eead4', serviced: '#f5b84a' };
+function dmLabel(v, r) { return v === 'day' ? DNL[dow(r.from)] + ' ' + C.fmtDate(r.from) : v === 'week' ? C.fmtDateShort(r.from) + ' – ' + C.fmtDate(r.to) : C.monShort(r.from) + ' ' + r.from.slice(0, 4); }
+function dmChart(cols) {
+  const W = 720, H = 230, L = 46, R = 10, Tp = 20, B = 44;
+  const max = Math.max(1000 * 100, ...cols.map(c => Math.max(c.signed, c.serviced)));
+  const step0 = max / 4 / 100, mag = Math.pow(10, Math.floor(Math.log10(step0))), step = [1, 2, 2.5, 5, 10].map(x => x * mag).find(x => x >= step0) * 100, top = Math.ceil(max / step) * step;
+  const y = v => Tp + (H - Tp - B) * (1 - v / top), bw = (W - L - R) / cols.length, many = cols.length > 14, g = many ? 1 : bw * .18, w = (bw - g * 2) / 2;
+  let h = '';
+  for (let v = 0; v <= top; v += step) h += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="#28224a"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end" fill="#a59fc9" font-size="11" font-family="JetBrains Mono,monospace">${kShort(v)}</text>`;
+  cols.forEach((c, i) => {
+    const x = L + i * bw + g, lab = many ? String(Number(c.day.slice(8))) : DNS[dow(c.day)] + ' ' + Number(c.day.slice(8));
+    const click = !c.future ? `data-a="dm-day" data-d="${c.day}"` : '';
+    h += `<g class="urbar${click ? ' click' : ''}" ${click} ${click ? 'tabindex="0" role="button"' : ''}><title>${esc(lab)}: podepsáno ${K(c.signed)}, odservisováno ${K(c.serviced)}, schůzek ${c.h}</title>`;
+    [['signed', 0], ['serviced', 1]].forEach(([k, j]) => { const v = c[k]; if (v) h += `<rect x="${x + j * w}" y="${y(v)}" width="${w - 1}" height="${Math.max(1, y(0) - y(v))}" rx="${many ? 1.5 : 4}" fill="${DM_COL[k]}" fill-opacity="${c.future ? .35 : .9}"/>`; });
+    if (!many || Number(lab) % 5 === 1) h += `<text x="${x + w}" y="${H - B + 16}" text-anchor="middle" fill="${c.future ? '#4a4373' : dow(c.day) >= 5 ? '#6b6494' : '#c3bde6'}" font-size="11.5" font-family="JetBrains Mono,monospace">${esc(lab)}</text>`;
+    if (!many && (c.h || c.p)) h += `<text x="${x + w}" y="${H - B + 32}" text-anchor="middle" fill="#a59fc9" font-size="11" font-family="JetBrains Mono,monospace">${c.p && !c.h ? '(' + c.p + ')' : c.h + '×'}</text>`;
+    if (c.day === today()) h += `<circle cx="${x + w}" cy="${H - B + 40}" r="2.5" fill="#5eead4"/>`;
+    h += '</g>';
+  });
+  return `<svg class="urchart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Graf marží Domovea po dnech">${h}</svg>`;
+}
+function dmForecast(o, v) {
+  const f = o.forecast; if (!f) return '';
+  const end = v === 'week' ? 'týdne' : 'měsíce';
+  if (!f.ok) return `<section class="card"><div class="elfline">${ELF('klid', 72)}<div>Predikci zatím nepočítám: ${esc(f.why)}.</div></div></section>`;
+  const rng = f.high > f.low ? K(f.low) + ' – ' + K(f.high) : K(f.low);
+  return `<section class="card chim"><div class="k">Skřítek tipuje · podepsáno do konce ${end}</div>
+    <div class="elfline">${ELF('napad', 72)}<div><span class="disp" style="font-size:1.5rem">≈ ${rng}</span><div class="meta">ODHAD · NE GARANCE · do nároků nikdy nejde</div></div></div>
+    <div class="meta" style="margin-top:8px">Základ: už podepsáno ${K(o.podepsano.minor)} + naplánováno <b>${f.planned}</b> ${plural(f.planned, 'schůzka', 'schůzky', 'schůzek')} × úspěšnost <b>${Math.round(f.rate * 100)} %</b> × Ø marže <b>${K(f.avg)}</b> (za posledních ${DM.REF_DAYS} dní).${f.high > f.low ? ` Horní mez přidává tempo schůzek na zbylých ${f.tailDays} dní.` : ''}</div>
+    ${f.servisPlan ? `<div class="meta">Servisy s plánovaným termínem do konce ${end}: ${K(f.servisPlan)} (odservisováno, pokud proběhnou).</div>` : ''}</section>`;
+}
+function dmRows(xs, color) { return xs.length ? xs.slice().sort((a, b) => b.date.localeCompare(a.date)).map(x => `<div class="row" data-a="open" data-c="${x.id}" style="cursor:pointer"><div class="l"><b>${esc(x.title)}</b><span>${C.fmtDateShort(x.date)}</span></div><span class="mono" style="color:${color}">${K(x.amountMinor)}</span></div>`).join('') : '<div class="empty">Nic v tomto období.</div>'; }
+function viewDomoveo() {
+  const T = today(), v = S.dmView; if (!S.dmAnchor) S.dmAnchor = T;
+  const o = DM.overview(S.cases, S.schuzky, v, S.dmAnchor, T), r = o.range, cols = DM.columns(S.cases, S.schuzky, v, S.dmAnchor, T);
+  const seg = `<div class="useg" role="group" aria-label="Období">${DM_VIEWS.map(([k, a]) => `<button type="button" class="${v === k ? 'on' : ''}" aria-pressed="${v === k}" data-a="dm-view" data-v="${k}">${a}</button>`).join('')}</div>`;
+  const nextDis = r.to >= T, prevDis = r.from <= '2026-01-01';
+  const tile = (k, val, sub, c) => `<div class="usrc"><b style="color:${c}">${k}</b><span class="v">${val}</span><span class="meta">${sub}</span></div>`;
+  const old = S.schuzky && S.schuzky.updatedAt;
+  return `<div class="grid"><section class="card urhead"><div class="urtop"><div><div class="k">Domoveo · marže podle dne</div><h2 class="disp urh">${DM_VIEWS.find(x => x[0] === v)[1]}</h2></div>${seg}</div>
+    <div class="unav"><button type="button" class="ibtn" data-a="dm-shift" data-d="-1" aria-label="Předchozí" ${prevDis ? 'disabled' : ''}>‹</button><span class="mono">${dmLabel(v, r)}</span><button type="button" class="ibtn" data-a="dm-shift" data-d="1" aria-label="Další" ${nextDis ? 'disabled' : ''}>›</button></div>
+    <div class="usrcs dmtiles" style="margin-top:10px">
+      ${tile('Podepsáno', K(o.podepsano.minor), o.podepsano.count + ' ' + plural(o.podepsano.count, 'objednávka', 'objednávky', 'objednávek') + ' · podle dne podpisu', DM_COL.signed)}
+      ${tile('Odservisováno', K(o.odservisovano.minor), o.odservisovano.count + ' ' + plural(o.odservisovano.count, 'zakázka', 'zakázky', 'zakázek') + ' · podle dne servisu', DM_COL.serviced)}
+      ${tile('Součet', K(o.soucet), 'podepsáno + odservisováno', '#f1eefe')}</div>
+    <div class="meta" style="margin-top:6px">Jedna zakázka se může objevit v obou sloupcích (den podpisu i den servisu), součet je prostý. Marže = provize v celých Kč, nárok z toho není.</div></section>
+    <section class="card"><div class="k">Schůzky a úspěšnost</div>
+      <div class="usrcs dmtiles" style="margin-top:8px">
+        ${tile('Schůzky', String(o.schuzky.h), 'provedeno' + (o.schuzky.z ? ' · ' + o.schuzky.z + ' zrušeno' : '') + (o.schuzky.p ? ' · ' + o.schuzky.p + ' naplánováno' : ''), '#c3bde6')}
+        ${tile('Uzavřeno', String(o.uzavrene), plural(o.uzavrene, 'objednávka', 'objednávky', 'objednávek') + (o.propadle.length ? ' · ' + o.propadle.length + ' storno' : ''), DM_COL.signed)}
+        ${tile('Úspěšnost', o.uspesnostPct == null ? '–' : o.uspesnostPct + ' %', 'uzavřeno ÷ provedené schůzky', '#c49bff')}</div>
+      ${S.schuzky ? '' : '<div class="warnbox" style="margin-top:10px">Schůzky po dnech zatím nedorazily z úlohy „Domoveo provize do Portmonky“. Počty schůzek a predikce se objeví po jejím dalším běhu.</div>'}</section>
+    ${dmForecast(o, v)}
+    <section class="card"><div class="ukey"><span style="color:${DM_COL.signed}">■ <b>podepsáno</b></span><span style="color:${DM_COL.serviced}">■ <b>odservisováno</b></span><span>pod dnem: <b>N×</b> provedené schůzky, <b>(N)</b> naplánované</span></div>${dmChart(cols)}${v !== 'day' ? '<div class="meta">Ťukni na sloupec a otevře se ten den.</div>' : ''}${old ? `<div class="meta">Schůzky naposledy aktualizovány ${C.fmtDate(old)}.</div>` : ''}</section>
+    <section class="card"><div class="k">Podepsáno · ${o.podepsano.count}</div>${dmRows(o.podepsano.items, DM_COL.signed)}</section>
+    <section class="card"><div class="k">Odservisováno · ${o.odservisovano.count}</div>${dmRows(o.odservisovano.items, DM_COL.serviced)}</section></div>`;
+}
+
+
 /* ---------------- FAKTURY (19. 11. 2026) ---------------- */
 const TAHAK_URL = 'https://tahax67.eu';
 const DM_FIRST_PERIOD = '2026-11'; // říjen 2026 = DMO01/26 vystavena ve Fakturoidu 11. 11.
@@ -847,6 +910,9 @@ function handle(e) {
   const one = () => I().find(x => x.caseId === cid && x.id === iid);
   switch (a) {
     case 'tab': S.tab = el.dataset.t; render(); scrollTo(0, 0); break;
+    case 'dm-view': S.dmView = el.dataset.v; if (S.dmView === 'day' && S.dmAnchor > today()) S.dmAnchor = today(); render(); break;
+    case 'dm-day': S.dmView = 'day'; S.dmAnchor = el.dataset.d; render(); break;
+    case 'dm-shift': { const n = Number(el.dataset.d), a = S.dmAnchor || today(); S.dmAnchor = S.dmView === 'day' ? C.addDays(a, n) : S.dmView === 'week' ? C.addDays(a, 7 * n) : C.addMonths(C.startOfMonth(a), n); if (S.dmAnchor > today()) S.dmAnchor = today(); render(); break; }
     case 'ur-view': S.urView = el.dataset.v; if (S.urView === 'day' && S.urAnchor > today()) S.urAnchor = today(); render(); break;
     case 'ur-span': S.urSpan = el.dataset.s === 'all' ? 'all' : Number(el.dataset.s); render(); break;
     case 'ur-day': S.urView = 'day'; S.urAnchor = el.dataset.d; if (el.dataset.tab) { S.tab = el.dataset.tab; scrollTo(0, 0); } render(); break;
