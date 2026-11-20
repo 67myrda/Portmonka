@@ -79,5 +79,17 @@ export function hit(el) { if (calm || !el) return; el.classList.remove('hit'); v
 
 /* ---- oslavy: volají se po úspěšném zápisu ---- */
 const toCenter = () => ({ x: innerWidth / 2, y: Math.min(innerHeight * .35, 260) });
-export function celebrateInvoice(color = '#f5b84a') { const p = toCenter(); buzz(20); confetti(p.x, p.y, [color, '#5eead4', '#ffffff']); }
-export function celebratePaid() { const p = toCenter(); buzz([20, 40, 30]); confetti(p.x, p.y, ['#f5b84a', '#4ade9b', '#6ea8ff', '#ffffff'], 80); }
+export function hopElf() {
+  if (calm) return;
+  document.querySelectorAll('.elfimg').forEach(e => { e.classList.remove('hop'); void e.offsetWidth; e.classList.add('hop'); setTimeout(() => e.classList.remove('hop'), 1000); });
+}
+// mince z prostředka obrazovky k dlaždici [data-fx], pak puls a konfety na ní
+async function coinsTo(fxKey, color, n, confN, cols) {
+  const t = document.querySelector(`[data-fx="${fxKey}"]`), p = toCenter();
+  if (!t) { confetti(p.x, p.y, cols, confN); return; }
+  t.scrollIntoView({ block: 'nearest', behavior: calm ? 'auto' : 'smooth' });
+  await fly(p, t, color, n);
+  hit(t); const m = mid(t); confetti(m.x, m.y, cols, confN);
+}
+export function celebrateInvoice(color = '#f5b84a') { buzz(20); hopElf(); coinsTo('way', color, 5, 40, [color, '#5eead4', '#ffffff']); }
+export function celebratePaid() { buzz([20, 40, 30]); hopElf(); coinsTo('paid', '#4ade9b', 8, 80, ['#f5b84a', '#4ade9b', '#6ea8ff', '#ffffff']); }
