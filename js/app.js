@@ -1,12 +1,14 @@
 // Portmonka 08 – UI nad deterministickým jádrem (core.js) a datovou vrstvou (store.js).
-import * as C from './core.js?v=8.19';
-import { createFirestoreStore, createMemoryStore } from './store.js?v=8.19';
-import * as O from './orbit.js?v=8.19';
-import * as U from './uroda.js?v=8.19';
-import * as DM from './domoveo.js?v=8.19';
-import * as INV from './invoice.js?v=8.19';
-import * as FX from './fx.js?v=8.19';
-import * as OS from './orbitscene.js?v=8.19';
+import * as C from './core.js?v=8.21';
+import { createFirestoreStore, createMemoryStore } from './store.js?v=8.21';
+import * as O from './orbit.js?v=8.21';
+import * as U from './uroda.js?v=8.21';
+import * as DM from './domoveo.js?v=8.21';
+import * as INV from './invoice.js?v=8.21';
+import * as FX from './fx.js?v=8.21';
+import * as OS from './orbitscene.js?v=8.21';
+import * as TS from './timescene.js?v=8.21';
+import { startSky } from './sky.js?v=8.21';
 
 const DEMO = new URLSearchParams(location.search).has('demo');
 const S = { podklady: {}, goornAdresy: {}, invoiceCfg: null, invoices: [], showInvCfg: false, tab: 'ted', user: null, cases: [], offers: null, uroda: null, schuzky: null, dmView: 'week', dmAnchor: null, urView: 'week', urAnchor: null, urSpan: 6, grp: 'month', collapsed: new Set(), opened: new Set(), loaded: false, filter: 'all', q: '', open: null, incMode: 'month', sel: new Set(), showWhy: false, busy: false, err: null };
@@ -26,8 +28,8 @@ const ICON = {
   reload: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>'
 };
 const MARK = '<svg class="mark" viewBox="0 0 40 40" aria-hidden="true"><rect x="3" y="11" width="34" height="24" rx="8" fill="none" stroke="#5eead4" stroke-width="3"></rect><path d="M11 11 C11 4 29 4 29 11" fill="none" stroke="#b493ff" stroke-width="3" stroke-linecap="round"></path><circle cx="20" cy="23" r="4" fill="#5eead4"></circle><circle cx="31" cy="6" r="2" fill="#f5b84a"></circle></svg>';
-const ELF = (pose = 'klid', size = 96) => `<img class="elfimg" src="img/elf/${pose}.webp?v=8.19" alt="Skřítek Portmonky" width="${size}" height="${size}" loading="lazy">`;
-const SI = (s, sz = 22) => SRC(s).icon ? `<img class="si" src="img/src/${SRC(s).icon}.webp?v=8.19" alt="" width="${sz}" height="${sz}" loading="lazy">` : SRC(s).emoji ? `<span class="si si-e" style="font-size:${Math.round(sz * .8)}px" aria-hidden="true">${SRC(s).emoji}</span>` : '';
+const ELF = (pose = 'klid', size = 96) => `<img class="elfimg" src="img/elf/${pose}.webp?v=8.21" alt="Skřítek Portmonky" width="${size}" height="${size}" loading="lazy">`;
+const SI = (s, sz = 22) => SRC(s).icon ? `<img class="si" src="img/src/${SRC(s).icon}.webp?v=8.21" alt="" width="${sz}" height="${sz}" loading="lazy">` : SRC(s).emoji ? `<span class="si si-e" style="font-size:${Math.round(sz * .8)}px" aria-hidden="true">${SRC(s).emoji}</span>` : '';
 
 function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 2600); }
 
@@ -54,22 +56,24 @@ function header() {
   const tf = [['ted', 'Teď'], ['orbit', 'Orbit'], ['uroda', 'Úroda'], ['domoveo', 'Domoveo'], ['prijem', 'Příjem'], ['pripady', 'Případy'], ['souhrn', 'Souhrn'], ['faktury', 'Faktury']];
   const tx = [['obj', 'Objevitel'], ['lab', 'Laboratoř']];
   return `<header class="top"><div class="top-in">
-    <div class="brand"><img class="logo" src="img/logo-96.webp?v=8.19" alt="" width="44" height="44"><div><b class="wm">Portmonka</b><small>zvědavý účetní skřítek</small></div></div>
+    <div class="brand"><img class="logo" src="img/logo-96.webp?v=8.21" alt="" width="44" height="44"><div><b class="wm">Portmonka</b><small>zvědavý účetní skřítek</small></div></div>
     <nav class="nav" aria-label="Pohledy">
       <div class="ngrp fin" role="group" aria-labelledby="ng-fin"><span class="grp" id="ng-fin">Finance</span><div class="ntabs">${tf.map(t => `<button type="button" class="tab${S.tab === t[0] ? ' on' : ''}" data-a="tab" data-t="${t[0]}">${t[1]}</button>`).join('')}</div></div>
       <div class="ngrp obj" role="group" aria-labelledby="ng-obj"><span class="grp" id="ng-obj">Objevování · připravuju</span><div class="ntabs">${tx.map(t => `<button type="button" class="tab x${S.tab === t[0] ? ' on' : ''}" data-a="tab" data-t="${t[0]}">${t[1]}</button>`).join('')}</div></div></nav>
     <div class="user">${DEMO ? '<span class="demo">UKÁZKOVÁ DATA</span>' : ''}
       <button type="button" class="btn solid add" data-a="add">${ICON.plus}<span>Přidat</span></button>
       <button type="button" class="ibtn" data-a="theme" aria-label="Přepnout světlé/tmavé téma" title="Téma">${document.documentElement.dataset.theme === 'light' ? '🌙' : '☀️'}</button>
+      <button type="button" class="ibtn" data-a="sound" aria-pressed="${FX.isSound()}" aria-label="Zvuk" title="Zvuk">${FX.isSound() ? '🔔' : '🔕'}</button>
       <button type="button" class="ibtn" data-a="calm" aria-pressed="${FX.isCalm()}" aria-label="Klidný režim (bez animací)" title="Klidný režim">${FX.isCalm() ? '🌙' : '✨'}</button>
       <button type="button" class="ibtn" data-a="reload" aria-label="Načíst znovu">${ICON.reload}</button>
       <button type="button" class="ibtn" data-a="logout" aria-label="${DEMO ? 'Ukončit ukázku' : 'Odhlásit'}">${ICON.out}</button></div>
   </div></header>`;
 }
+let lastTab = null;
 function render() {
   const app = $('#app');
   if (!S.user) {
-    app.innerHTML = `<div class="wrap"><section class="login card"><img class="logo big" src="img/logo-96.webp?v=8.19" alt="Logo Portmonky" width="96" height="96">
+    app.innerHTML = `<div class="wrap"><section class="login card"><img class="logo big" src="img/logo-96.webp?v=8.21" alt="Logo Portmonky" width="96" height="96">
       <h1 class="wm">Portmonka</h1><p>Zvědavý účetní skřítek. Přihlas se přes Google, data se ukládají do tvého zabezpečeného prostoru ve Firestore.</p>
       <div class="btns" style="justify-content:center;margin-top:18px"><button type="button" class="btn solid" data-a="login">Přihlásit přes Google</button>
       <a class="btn ghost" href="?demo=1" style="text-decoration:none;display:inline-flex;align-items:center">Prohlédnout s ukázkovými daty</a></div></section></div>`;
@@ -89,7 +93,8 @@ function render() {
   else body = viewSoon(S.tab);
   app.innerHTML = `<div class="wrap">${header()}${S.err ? `<div class="warnbox" style="margin-bottom:14px">${esc(S.err)}</div>` : ''}${body}
     <div class="foot">Portmonka 08 · ${DEMO ? 'ukázková data, nic se neukládá' : esc(S.user.email)} · Matematika = aplikace, interpretace = Skřítek.</div></div>`;
-  FX.rollAll(app); OS.mountAll(app);
+  const entering = lastTab !== S.tab; lastTab = S.tab; if (entering) app.classList.add('enter'); else app.classList.remove('enter');
+  FX.autoRoll(app, S.tab); FX.rollAll(app); OS.mountAll(app); TS.mountAll(app); startSky();
 }
 
 /* ---------------- TEĎ ---------------- */
@@ -134,12 +139,14 @@ function viewTed(I) {
           <div class="btns"><button type="button" class="btn ghost" data-a="why">${S.showWhy ? 'Schovat důkazy' : 'Proč si to myslím?'}</button></div>
           ${S.showWhy ? `<ul class="ev">${elf.evidence.map(e => `<li>${esc(e)}</li>`).join('')}</ul><div class="meta" style="margin-top:6px">Fakt = spočítáno z dat · Hypotéza = stopa, ne jistota</div>` : ''}`
         : `<span class="tagc">Klid</span><div class="hl">Zatím nic zvláštního.</div><div class="meta">Dívám se na čísla. Až mi něco nebude sedět, ozvu se.</div>`}
+        <div class="btns"><button type="button" class="btn ghost" data-a="guide">Skřítku, ukaž, co je důležité</button></div>
       </div></div></section>
   </div>
   <div class="grid g4 m6">${metrics.map(m => `<div class="card metric${m.a ? ' click' : ''}"${m.fx ? ` data-fx="${m.fx}"` : ''}${m.a ? ` data-a="tab" data-t="${m.a}" role="button" tabindex="0"` : ''}><div class="k">${m.k}</div><div class="v" style="color:${m.c}"${m.n != null ? ` data-roll="m-${esc(m.k)}" data-v="${m.n}"` : ''}>${m.v}</div><span>${m.sub}</span></div>`).join('')}</div>
   ${gl.length ? `<section class="card"><div class="k">Na cestě · vyfakturováno, čeká na platbu</div>
     ${gl.map(g => `<div class="row"><div class="l"><b>${g.no ? 'Faktura ' + esc(g.no) : esc(SRC(g.xs[0].source).name + ' · ' + g.xs[0].title)}</b><span>${g.xs.length > 1 || g.no ? g.xs.map(x => esc(x.title)).join(', ') + ' · ' : esc(g.xs[0].label) + ' · '}vyfakturováno ${C.fmtDateShort(g.at)} (${C.diffDays(g.at, T)} dní${C.diffDays(g.at, T) > C.FORECAST_RULE.payAfterInvoice ? ' · <b style="color:var(--coral);display:inline">po termínu platby</b>' : ''})</span></div>
       <span class="mono">${K(g.sum)}</span><button type="button" class="btn" data-a="pay-group" data-k="${esc(g.k)}">Přišlo na účet</button></div>`).join('')}</section>` : ''}
+  ${(() => { const pts = I.filter(i => i.st === 'WAITING' && !C.isBlocked(i) && i.claimDate).map(i => ({ d: C.diffDays(T, i.claimDate), a: i.amountMinor, c: SRC(i.source).color, n: i.title })).filter(p => p.d > 0 && p.d <= 120).sort((x, y) => x.d - y.d); return pts.length ? `<section class="card"><div class="k">Cesta časem · co dozraje (jen nároky s datem)</div><div class="meta" style="margin:4px 0 10px">Táhni prstem po scéně nebo jezdcem. Podmíněné a odhadované peníze tu nejsou.</div>${TS.timeHtml({ points: pts })}</section>` : ''; })()}
   ${timeline(I, T)}
   ${viewOffers(S.offers)}
   <section class="card"><div class="k">Výhled nároků · další měsíce</div>
@@ -930,6 +937,8 @@ function handle(e) {
     case 'login': store.signIn().catch(er => { console.error(er); toast('Přihlášení přes Google se nepodařilo.'); }); break;
     case 'logout': store.signOut(); break;
     case 'theme': { const l = document.documentElement.dataset.theme !== 'light'; if (l) document.documentElement.dataset.theme = 'light'; else delete document.documentElement.dataset.theme; try { localStorage.setItem('pm.theme', l ? 'light' : 'dark'); } catch (_) {} const m = document.querySelector('meta[name=theme-color]'); if (m) m.content = l ? '#f4f3fb' : '#0c0a1d'; render(); break; }
+    case 'sound': FX.setSound(!FX.isSound()); render(); break;
+    case 'guide': FX.guide([{ sel: '.mission .big', text: 'Tohle můžeš vyfakturovat hned.' }, { sel: '[data-fx="way"]', text: 'Tohle je vyfakturované a čeká na platbu.' }, { sel: '[data-fx="paid"]', text: 'Tolik tento měsíc opravdu přišlo.' }, { sel: '.ts', text: 'A tady uvidíš, co dozraje.' }], el.closest('.elf')?.querySelector('.elfimg')); break;
     case 'calm': FX.setCalm(!FX.isCalm()); render(); toast(FX.isCalm() ? 'Klidný režim: bez animací.' : 'Animace zapnuty.'); break;
     case 'reload': reload().then(() => toast('Načteno.')); break;
     case 'add': openAdd(); break;

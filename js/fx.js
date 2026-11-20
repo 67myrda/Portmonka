@@ -17,6 +17,12 @@ export function buzz(p) { try { if (!calm && navigator.vibrate) navigator.vibrat
 /* ---- čítač čísel: [data-roll="klíč"][data-v="částka v Kč"] ---- */
 const shown = new Map();
 const kc = n => Math.round(n).toLocaleString('cs-CZ').replace(/ /g, ' ') + ' Kč';
+export function autoRoll(root, scope) {
+  root.querySelectorAll('.big,.ubig .disp,.metric .v,.big2').forEach((el, i) => {
+    if (el.dataset.roll || el.children.length) return; const m = /^([\d\s\u00a0]+)\s*Kč$/.exec(el.textContent.trim()); if (!m) return;
+    el.dataset.roll = scope + '|' + (el.className || 'x') + '|' + i; el.dataset.v = String(parseInt(m[1].replace(/[\s\u00a0]/g, ''), 10));
+  });
+}
 export function rollAll(root = document) {
   root.querySelectorAll('[data-roll]').forEach(el => {
     const key = el.dataset.roll, to = Number(el.dataset.v);
@@ -91,5 +97,37 @@ async function coinsTo(fxKey, color, n, confN, cols) {
   await fly(p, t, color, n);
   hit(t); const m = mid(t); confetti(m.x, m.y, cols, confN);
 }
-export function celebrateInvoice(color = '#f5b84a') { buzz(20); hopElf(); coinsTo('way', color, 5, 40, [color, '#5eead4', '#ffffff']); }
-export function celebratePaid() { buzz([20, 40, 30]); hopElf(); coinsTo('paid', '#4ade9b', 8, 80, ['#f5b84a', '#4ade9b', '#6ea8ff', '#ffffff']); }
+export function celebrateInvoice(color = '#f5b84a') { ding([880, 1320]); buzz(20); hopElf(); coinsTo('way', color, 5, 40, [color, '#5eead4', '#ffffff']); }
+export function celebratePaid() { ding([784, 1175, 1568]); buzz([20, 40, 30]); hopElf(); coinsTo('paid', '#4ade9b', 8, 80, ['#f5b84a', '#4ade9b', '#6ea8ff', '#ffffff']); }
+
+/* ---- zvuk (vypnutý, dokud ho nezapneš; localStorage pm.sound) ---- */
+let sound = false; try { sound = localStorage.getItem('pm.sound') === '1'; } catch (_) {}
+export const isSound = () => sound;
+export function setSound(v) { sound = !!v; try { localStorage.setItem('pm.sound', sound ? '1' : '0'); } catch (_) {} if (sound) ding([880, 1320]); }
+let ac;
+export function ding(notes = [880, 1320]) {
+  if (!sound || calm) return;
+  try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); notes.forEach((fr, i) => { const o = ac.createOscillator(), g = ac.createGain(); o.type = 'sine'; o.frequency.value = fr; const t = ac.currentTime + i * .09; g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.12, t + .02); g.gain.exponentialRampToValueAtTime(.0001, t + .5); o.connect(g).connect(ac.destination); o.start(t); o.stop(t + .55); }); } catch (_) {}
+}
+
+/* ---- skřítek průvodce: doběhne k číslům a řekne, co jsou ---- */
+let guiding = false, gi = 0;
+const docPos = el => { const r = el.getBoundingClientRect(); return { x: r.left + scrollX, y: r.top + scrollY, w: r.width, h: r.height }; };
+const sleep = ms => new Promise(r => setTimeout(r, calm ? Math.min(ms, 60) : ms));
+export async function guide(steps, from) {
+  if (guiding) return; const live = steps.filter(s => document.querySelector(s.sel)); if (!live.length) return; guiding = true;
+  const [s0] = [live[gi++ % live.length]], t = document.querySelector(s0.sel);
+  const rv = document.createElement('div'); rv.style.cssText = 'position:absolute;left:0;top:0;width:88px;height:88px;z-index:95;pointer-events:none;transition:transform 1.1s cubic-bezier(.6,0,.3,1),opacity .3s;opacity:0';
+  const im = document.createElement('img'); im.src = 'img/elf/klid.webp?v=8.21'; im.alt = ''; im.style.cssText = 'width:100%;height:100%;display:block;transform-origin:50% 92%;filter:drop-shadow(0 8px 10px rgba(0,0,0,.25))';
+  rv.appendChild(im); const tag = document.createElement('div'); tag.style.cssText = 'position:absolute;z-index:96;max-width:230px;background:var(--fg);color:var(--bg);padding:8px 12px;border-radius:14px;font:700 14px system-ui;opacity:0;transform:translateY(6px);transition:opacity .3s,transform .3s;pointer-events:none';
+  document.body.append(rv, tag);
+  const h = from ? docPos(from) : { x: scrollX + 20, y: scrollY + innerHeight - 140 };
+  rv.style.transition = 'none'; rv.style.transform = `translate(${h.x}px,${h.y}px)`; void rv.offsetWidth; rv.style.transition = ''; rv.style.opacity = 1;
+  if (!calm) im.animate([{ transform: 'translateY(0) rotate(-6deg)' }, { transform: 'translateY(-9px) rotate(6deg)' }], { duration: 320, iterations: 5, direction: 'alternate' });
+  t.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'center' }); await sleep(650);
+  const p = docPos(t), tx = Math.max(8, Math.min(p.x + p.w - 90, scrollX + innerWidth - 100)), ty = p.y - 70;
+  rv.style.transform = `translate(${tx}px,${ty}px)`; await sleep(1150);
+  im.src = 'img/elf/napad.webp?v=8.21'; tag.textContent = s0.text; tag.style.left = Math.max(8, Math.min(tx - 120, scrollX + innerWidth - 240)) + 'px'; tag.style.top = (ty + 92) + 'px'; tag.style.opacity = 1; tag.style.transform = 'none';
+  const card = t.closest('.card,.mission') || t; hit(card); buzz(15); ding([660, 990]);
+  await sleep(2600); tag.style.opacity = 0; rv.style.opacity = 0; await sleep(350); rv.remove(); tag.remove(); guiding = false;
+}
