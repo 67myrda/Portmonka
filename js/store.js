@@ -1,6 +1,6 @@
 // Datová vrstva Portmonky: Firestore (ostrý provoz) a paměťový režim (ukázková data, nic se neukládá).
 // Model: users/{uid}/cases/{caseId}/installments/{id} + users/{uid}/events/{id}
-import { buildInstallments, localToday, addDays, addMonths, GOORN_PART1_MINOR, GOORN_PART2_MINOR, COND_GOORN, COND_DOMOVEO } from './core.js?v=8.15';
+import { buildInstallments, localToday, addDays, addMonths, GOORN_PART1_MINOR, GOORN_PART2_MINOR, COND_GOORN, COND_DOMOVEO } from './core.js?v=8.16';
 
 const FB = 'https://www.gstatic.com/firebasejs/12.19.0/';
 const firebaseConfig = { apiKey: 'AIzaSyAw4mguBLX5RKw0qponSyGEacwiExt4OkI', authDomain: 'portmonka-951967.firebaseapp.com', projectId: 'portmonka-951967', storageBucket: 'portmonka-951967.firebasestorage.app', messagingSenderId: '723477690356', appId: '1:723477690356:web:261e152b2da52251b2ba1' };
@@ -107,45 +107,45 @@ export function createMemoryStore() {
     cases.push(c);
     return c;
   };
-  add('Pro-Factor', 'Náchod', addMonths(T, -5), { totalMinor: 2000000 }, i => { i[0].invoicedAt = addDays(i[0].claimDate, 2); i[0].paidAt = addDays(i[0].claimDate, 21); i[1].invoicedAt = addDays(i[1].claimDate, 2); i[1].paidAt = addDays(i[1].claimDate, 20); });
-  add('Pro-Factor', 'Jaroměř', addMonths(T, -4), { totalMinor: 1200000 }, i => { i[0].invoicedAt = addDays(i[0].claimDate, 1); i[0].paidAt = addDays(i[0].claimDate, 16); });
-  add('Pro-Factor', 'Litomyšl', addMonths(T, -3), { totalMinor: 2500000 }, i => { i[0].invoicedAt = addDays(i[0].claimDate, 2); i[0].paidAt = addDays(i[0].claimDate, 18); });
-  const polic = add('Pro-Factor', 'Polička', d(-48), { totalMinor: 2200000 }, i => { i[0].invoicedAt = d(-45); i[0].paidAt = d(-23); });
-  const svit = add('Pro-Factor', 'Svitavy', d(-9), { totalMinor: 2800000 });
-  add('GOORN', 'Dvořák, Hronov', d(-156), {}, i => { i[0].invoicedAt = d(-154); i[0].paidAt = d(-127); });
-  add('GOORN', 'Novák, Police', d(-121), {}, i => { i[0].invoicedAt = d(-119); i[0].paidAt = d(-94); });
-  add('GOORN', 'Pokorná, Úpice', d(-65), {}, i => { i[0].invoicedAt = d(-63); i[0].paidAt = d(-35); i[1].conditionSatisfiedDate = d(-3); i[1].claimDate = d(-3); });
-  add('GOORN', 'Svoboda, Broumov', d(-21), {}, i => { i[0].invoicedAt = d(-19); i[0].invoiceNo = '7/26'; });
-  const maly = add('GOORN', 'Malý, Nové Město', d(-8), {});
-  add('Domoveo.cz', 'Mačková, Trutnov', d(-4), { domoveo: { kind: 'order', priceNetMinor: 352100, rate: 17 } }, i => { i[0].expectedServiceDate = d(6); i[0].expectedClaimDate = addDays(addMonths(d(6).slice(0, 8) + '01', 1), 10); });
-  add('Domoveo.cz', 'Čelišová, Jičín', d(-4), { domoveo: { kind: 'order', priceNetMinor: 980000, rate: 17 } });
+  add('Pro-Factor', 'Lipová', addMonths(T, -5), { totalMinor: 2000000 }, i => { i[0].invoicedAt = addDays(i[0].claimDate, 2); i[0].paidAt = addDays(i[0].claimDate, 21); i[1].invoicedAt = addDays(i[1].claimDate, 2); i[1].paidAt = addDays(i[1].claimDate, 20); });
+  add('Pro-Factor', 'Březí', addMonths(T, -4), { totalMinor: 1200000 }, i => { i[0].invoicedAt = addDays(i[0].claimDate, 1); i[0].paidAt = addDays(i[0].claimDate, 16); });
+  add('Pro-Factor', 'Zelená Lhota', addMonths(T, -3), { totalMinor: 2500000 }, i => { i[0].invoicedAt = addDays(i[0].claimDate, 2); i[0].paidAt = addDays(i[0].claimDate, 18); });
+  const polic = add('Pro-Factor', 'Horní Újezd', d(-48), { totalMinor: 2200000 }, i => { i[0].invoicedAt = d(-45); i[0].paidAt = d(-23); });
+  const svit = add('Pro-Factor', 'Dolní Brod', d(-9), { totalMinor: 2800000 });
+  add('GOORN', 'Ukázka Rybář, Studánka', d(-156), {}, i => { i[0].invoicedAt = d(-154); i[0].paidAt = d(-127); });
+  add('GOORN', 'Ukázka Horák, Lipová', d(-121), {}, i => { i[0].invoicedAt = d(-119); i[0].paidAt = d(-94); });
+  add('GOORN', 'Ukázka Nováková, Březí', d(-65), {}, i => { i[0].invoicedAt = d(-63); i[0].paidAt = d(-35); i[1].conditionSatisfiedDate = d(-3); i[1].claimDate = d(-3); });
+  add('GOORN', 'Ukázka Krejčí, Dolní Brod', d(-21), {}, i => { i[0].invoicedAt = d(-19); i[0].invoiceNo = '7/26'; });
+  const maly = add('GOORN', 'Ukázka Malý, Lipová', d(-8), {});
+  add('Domoveo.cz', 'Ukázka Šimková, Lipová', d(-4), { domoveo: { kind: 'order', priceNetMinor: 352100, rate: 17 } }, i => { i[0].expectedServiceDate = d(6); i[0].expectedClaimDate = addDays(addMonths(d(6).slice(0, 8) + '01', 1), 10); });
+  add('Domoveo.cz', 'Ukázka Beneš, Březí', d(-4), { domoveo: { kind: 'order', priceNetMinor: 980000, rate: 17 } });
   add('Domoveo.cz', 'Ukázka: technik nevpuštěn', d(-15), { domoveo: { kind: 'order', priceNetMinor: 658800, rate: 17 } }, i => { i[0].lostAt = d(-6); i[0].lostReason = 'Klient nepustil technika'; });
-  add('Grafika', 'Plakát Jazz Náchod', d(-38), { totalMinor: 850000 }, i => { i[0].invoicedAt = d(-37); });
-  add('Grafika', 'Logo kavárna', d(-80), { totalMinor: 420000 }, i => { i[0].invoicedAt = d(-79); i[0].paidAt = d(-65); });
+  add('Grafika', 'Plakát Jarní jarmark', d(-38), { totalMinor: 850000 }, i => { i[0].invoicedAt = d(-37); });
+  add('Grafika', 'Logo pekárna', d(-80), { totalMinor: 420000 }, i => { i[0].invoicedAt = d(-79); i[0].paidAt = d(-65); });
   add('Grafika', 'Vizitky', d(-20), { totalMinor: 240000 }, i => { i[0].invoicedAt = d(-20); i[0].paidAt = d(-14); });
   const offers = { updatedAt: T, dphPct: 12, sazbaPct: 17, uspesnostPct: 20, celkemMinor: 1394700, realneMinor: 278900, polozky: [
-    { klient: 'Ukázka Novotná', obec: 'Trutnov', castkaSDphKc: 51839, zakladKc: 46285, provizeMinor: 786800, schuzka: d(-4) },
-    { klient: 'Ukázka Dvořák', obec: 'Náchod', castkaSDphKc: 25292, zakladKc: 22582, provizeMinor: 383900, schuzka: d(-3) },
-    { klient: 'Ukázka Malá', obec: 'Hradec Králové', castkaSDphKc: 26925, zakladKc: 24040, provizeMinor: 224000, schuzka: d(-1) }] };
+    { klient: 'Ukázka Novotná', obec: 'Lipová', castkaSDphKc: 51839, zakladKc: 46285, provizeMinor: 786800, schuzka: d(-4) },
+    { klient: 'Ukázka Dvořák', obec: 'Březí', castkaSDphKc: 25292, zakladKc: 22582, provizeMinor: 383900, schuzka: d(-3) },
+    { klient: 'Ukázka Malá', obec: 'Studánka', castkaSDphKc: 26925, zakladKc: 24040, provizeMinor: 224000, schuzka: d(-1) }] };
   // Úroda: prodané inzeráty z Taháku a úspěšné prohlídky GOORN (ukázka)
   const PFK = ['Pekařství', 'Autoservis', 'Lékárna', 'Kavárna', 'Stavebniny', 'Fitness', 'Optika', 'Zahradnictví', 'Květiny', 'Pneuservis'];
   const urSeeds = [];
   const pfRows = (k, city, from, to, n, tw) => { for (let j = 0; j < n; j++) { const dd = d(from + Math.round((to - from) * j / Math.max(1, n - 1))); urSeeds.push({ id: k + '_r' + j, s: 'pf', d: dd, c: (1200 + (j * 737) % 4300) * 100, t: 'Ukázka ' + PFK[j % PFK.length], n: city, k, ...(tw ? tw(j) : {}) }); } };
-  pfRows(polic.id, 'Polička', -95, -50, 9);
-  pfRows(svit.id, 'Svitavy', -44, -10, 11);
-  pfRows('pf_hronov_demo', 'Hronov', -6, 0, 5, j => j === 1 ? { l: d(-2) } : {});
-  urSeeds.push({ id: 'go_demo1', s: 'go', d: d(-10), c: 572000, t: 'Malý, Nové Město', n: 'celá provize · 1. část po instalaci, 2. část za ~10 měsíců', k: maly.id });
+  pfRows(polic.id, 'Horní Újezd', -95, -50, 9);
+  pfRows(svit.id, 'Dolní Brod', -44, -10, 11);
+  pfRows('pf_hronov_demo', 'Studánka', -6, 0, 5, j => j === 1 ? { l: d(-2) } : {});
+  urSeeds.push({ id: 'go_demo1', s: 'go', d: d(-10), c: 572000, t: 'Ukázka Malý, Lipová', n: 'celá provize · 1. část po instalaci, 2. část za ~10 měsíců', k: maly.id });
   urSeeds.push({ id: 'go_demo2', s: 'go', d: d(-1), c: 572000, t: 'Ukázka Hakl, Benešov', n: 'celá provize · 1. část po instalaci, 2. část za ~10 měsíců' });
   urSeeds.push({ id: 'go_demo3', s: 'go', d: d(-30), c: 572000, t: 'Ukázka zrušená realizace', n: 'zákazník odstoupil', l: d(-20) });
   const uroda = { asOf: T, seeds: urSeeds };
   // Domoveo přehled (ukázka, vše vymyšlené): podpis a servis jsou dvě události; schůzky po dnech
-  add('Domoveo.cz', 'Ukázka Svobodová, Jičín', d(-9), { domoveo: { kind: 'order', priceNetMinor: 2410000, rate: 17 } }, i => { i[0].conditionSatisfiedDate = d(-3); i[0].claimDate = addDays(addMonths(d(-3).slice(0, 8) + '01', 1), 10); });
-  add('Domoveo.cz', 'Ukázka Kolář, Hořice', d(-6), { domoveo: { kind: 'order', priceNetMinor: 1790000, rate: 17 } }, i => { i[0].conditionSatisfiedDate = d(-1); i[0].claimDate = addDays(addMonths(d(-1).slice(0, 8) + '01', 1), 10); });
-  add('Domoveo.cz', 'Ukázka Veselá, Dvůr Králové', d(-2), { domoveo: { kind: 'order', priceNetMinor: 3020000, rate: 17 } }, i => { i[0].expectedServiceDate = d(5); i[0].expectedClaimDate = addDays(addMonths(d(5).slice(0, 8) + '01', 1), 10); });
+  add('Domoveo.cz', 'Ukázka Svobodová, Březí', d(-9), { domoveo: { kind: 'order', priceNetMinor: 2410000, rate: 17 } }, i => { i[0].conditionSatisfiedDate = d(-3); i[0].claimDate = addDays(addMonths(d(-3).slice(0, 8) + '01', 1), 10); });
+  add('Domoveo.cz', 'Ukázka Kolář, Studánka', d(-6), { domoveo: { kind: 'order', priceNetMinor: 1790000, rate: 17 } }, i => { i[0].conditionSatisfiedDate = d(-1); i[0].claimDate = addDays(addMonths(d(-1).slice(0, 8) + '01', 1), 10); });
+  add('Domoveo.cz', 'Ukázka Veselá, Dolní Brod', d(-2), { domoveo: { kind: 'order', priceNetMinor: 3020000, rate: 17 } }, i => { i[0].expectedServiceDate = d(5); i[0].expectedClaimDate = addDays(addMonths(d(5).slice(0, 8) + '01', 1), 10); });
   const schuzky = { updatedAt: T, dny: {} };
   for (let k = -45; k <= 4; k++) { const dd = d(k), wd = (new Date(dd + 'T00:00:00Z').getUTCDay() + 6) % 7; if (wd > 4) continue; const h = (((k * 7 + 11) % 4) + 4) % 4; schuzky.dny[dd] = k <= 0 ? { h, z: (k % 5 === 0) ? 1 : 0, p: 0 } : { h: 0, z: 0, p: 1 + (k % 3 === 0 ? 1 : 0) }; }
-  const invoiceCfg = { suppliers: { O: { name: 'Monika Ukázková', street: 'Ukázková 1', city: '547 01 Náchod', ico: '12345678', account: '2202540688/2010', phone: '777 000 111', email: 'ukazka@example.cz' }, Y: { name: 'Myrda Ukázkový', street: 'Ukázková 1', city: '547 01 Náchod', ico: '87654321', account: '2302617865/2010' } }, enabledY: false,
-    customers: { dm: { name: 'Domoveo s.r.o.', street: 'Jandova 598/1', city: '190 00 Praha 9 – Vysočany', ico: '10932585', dic: 'CZ10932585', email: 'vedeni@domoveo.cz' }, go: { name: 'GOORN s.r.o.', street: '1. máje 35', city: '798 26 Nezamyslice', ico: '19949707', dic: 'CZ19949707' }, pf: { name: 'PRO-FACTOR cz, s.r.o.', street: 'Revoluční 62', city: '544 01 Dvůr Králové nad Labem', ico: '26013509', dic: 'CZ26013509' } },
+  const invoiceCfg = { suppliers: { O: { name: 'Monika Ukázková', street: 'Ukázková 1', city: '111 11 Ukázkov', ico: '12345678', account: '123456789/0800', phone: '777 000 111', email: 'ukazka@example.cz' }, Y: { name: 'Myrda Ukázkový', street: 'Ukázková 1', city: '111 11 Ukázkov', ico: '87654321', account: '987654321/0800' } }, enabledY: false,
+    customers: { dm: { name: 'Ukázka Servis s.r.o.', street: 'Vzorová 1', city: '100 00 Praha', ico: '00000000', dic: 'CZ00000000', email: 'ukazka@example.cz' }, go: { name: 'Ukázka Izolace s.r.o.', street: 'Vzorová 2', city: '111 11 Ukázkov', ico: '00000001', dic: 'CZ00000001' }, pf: { name: 'Ukázka Plakáty s.r.o.', street: 'Vzorová 3', city: '111 11 Ukázkov', ico: '00000002', dic: 'CZ00000002' } },
     series: { DMO: { yy: 26, next: 2 }, GOO: { yy: 26, next: 10 }, OSO: { yy: 26, next: 1 }, DMY: { yy: 26, next: 1 }, GOY: { yy: 26, next: 1 }, OSY: { yy: 26, next: 1 } }, dueDays: 7 };
   const invoices = [];
   const pm = T.slice(0, 7), prevYm = addMonths(T.slice(0, 7) + '-01', -1).slice(0, 7);
