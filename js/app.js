@@ -1,11 +1,11 @@
 // Portmonka 08 – UI nad deterministickým jádrem (core.js) a datovou vrstvou (store.js).
-import * as C from './core.js?v=8.14';
-import { createFirestoreStore, createMemoryStore } from './store.js?v=8.14';
-import * as O from './orbit.js?v=8.14';
-import * as U from './uroda.js?v=8.14';
-import * as DM from './domoveo.js?v=8.14';
-import * as INV from './invoice.js?v=8.14';
-import * as FX from './fx.js?v=8.14';
+import * as C from './core.js?v=8.15';
+import { createFirestoreStore, createMemoryStore } from './store.js?v=8.15';
+import * as O from './orbit.js?v=8.15';
+import * as U from './uroda.js?v=8.15';
+import * as DM from './domoveo.js?v=8.15';
+import * as INV from './invoice.js?v=8.15';
+import * as FX from './fx.js?v=8.15';
 
 const DEMO = new URLSearchParams(location.search).has('demo');
 const S = { podklady: {}, goornAdresy: {}, invoiceCfg: null, invoices: [], showInvCfg: false, tab: 'ted', user: null, cases: [], offers: null, uroda: null, schuzky: null, dmView: 'week', dmAnchor: null, urView: 'week', urAnchor: null, urSpan: 6, grp: 'month', collapsed: new Set(), opened: new Set(), loaded: false, filter: 'all', q: '', open: null, incMode: 'month', sel: new Set(), showWhy: false, busy: false, err: null };
@@ -15,7 +15,7 @@ const $ = s => document.querySelector(s);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 const today = () => C.localToday();
 const K = C.fmtKc;
-const SRC = s => C.SOURCES[s] || { name: s, color: '#a59fc9', key: 'x' };
+const SRC = s => C.SOURCES[s] || { name: s, color: 'var(--mu)', key: 'x' };
 const plural = (n, a, b, c) => n === 1 ? a : n >= 2 && n <= 4 ? b : c;
 
 const ICON = {
@@ -25,8 +25,8 @@ const ICON = {
   reload: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>'
 };
 const MARK = '<svg class="mark" viewBox="0 0 40 40" aria-hidden="true"><rect x="3" y="11" width="34" height="24" rx="8" fill="none" stroke="#5eead4" stroke-width="3"></rect><path d="M11 11 C11 4 29 4 29 11" fill="none" stroke="#b493ff" stroke-width="3" stroke-linecap="round"></path><circle cx="20" cy="23" r="4" fill="#5eead4"></circle><circle cx="31" cy="6" r="2" fill="#f5b84a"></circle></svg>';
-const ELF = (pose = 'klid', size = 96) => `<img class="elfimg" src="img/elf/${pose}.webp?v=8.14" alt="Skřítek Portmonky" width="${size}" height="${size}" loading="lazy">`;
-const SI = (s, sz = 22) => SRC(s).icon ? `<img class="si" src="img/src/${SRC(s).icon}.webp?v=8.14" alt="" width="${sz}" height="${sz}" loading="lazy">` : SRC(s).emoji ? `<span class="si si-e" style="font-size:${Math.round(sz * .8)}px" aria-hidden="true">${SRC(s).emoji}</span>` : '';
+const ELF = (pose = 'klid', size = 96) => `<img class="elfimg" src="img/elf/${pose}.webp?v=8.15" alt="Skřítek Portmonky" width="${size}" height="${size}" loading="lazy">`;
+const SI = (s, sz = 22) => SRC(s).icon ? `<img class="si" src="img/src/${SRC(s).icon}.webp?v=8.15" alt="" width="${sz}" height="${sz}" loading="lazy">` : SRC(s).emoji ? `<span class="si si-e" style="font-size:${Math.round(sz * .8)}px" aria-hidden="true">${SRC(s).emoji}</span>` : '';
 
 function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 2600); }
 
@@ -53,12 +53,13 @@ function header() {
   const tf = [['ted', 'Teď'], ['orbit', 'Orbit'], ['uroda', 'Úroda'], ['domoveo', 'Domoveo'], ['prijem', 'Příjem'], ['pripady', 'Případy'], ['souhrn', 'Souhrn'], ['faktury', 'Faktury']];
   const tx = [['obj', 'Objevitel'], ['lab', 'Laboratoř']];
   return `<header class="top"><div class="top-in">
-    <div class="brand"><img class="logo" src="img/logo-96.webp?v=8.14" alt="" width="44" height="44"><div><b class="wm">Portmonka</b><small>zvědavý účetní skřítek</small></div></div>
+    <div class="brand"><img class="logo" src="img/logo-96.webp?v=8.15" alt="" width="44" height="44"><div><b class="wm">Portmonka</b><small>zvědavý účetní skřítek</small></div></div>
     <nav class="nav" aria-label="Pohledy">
       <div class="ngrp fin" role="group" aria-labelledby="ng-fin"><span class="grp" id="ng-fin">Finance</span><div class="ntabs">${tf.map(t => `<button type="button" class="tab${S.tab === t[0] ? ' on' : ''}" data-a="tab" data-t="${t[0]}">${t[1]}</button>`).join('')}</div></div>
       <div class="ngrp obj" role="group" aria-labelledby="ng-obj"><span class="grp" id="ng-obj">Objevování · připravuju</span><div class="ntabs">${tx.map(t => `<button type="button" class="tab x${S.tab === t[0] ? ' on' : ''}" data-a="tab" data-t="${t[0]}">${t[1]}</button>`).join('')}</div></div></nav>
     <div class="user">${DEMO ? '<span class="demo">UKÁZKOVÁ DATA</span>' : ''}
       <button type="button" class="btn solid add" data-a="add">${ICON.plus}<span>Přidat</span></button>
+      <button type="button" class="ibtn" data-a="theme" aria-label="Přepnout světlé/tmavé téma" title="Téma">${document.documentElement.dataset.theme === 'light' ? '🌙' : '☀️'}</button>
       <button type="button" class="ibtn" data-a="calm" aria-pressed="${FX.isCalm()}" aria-label="Klidný režim (bez animací)" title="Klidný režim">${FX.isCalm() ? '🌙' : '✨'}</button>
       <button type="button" class="ibtn" data-a="reload" aria-label="Načíst znovu">${ICON.reload}</button>
       <button type="button" class="ibtn" data-a="logout" aria-label="${DEMO ? 'Ukončit ukázku' : 'Odhlásit'}">${ICON.out}</button></div>
@@ -67,7 +68,7 @@ function header() {
 function render() {
   const app = $('#app');
   if (!S.user) {
-    app.innerHTML = `<div class="wrap"><section class="login card"><img class="logo big" src="img/logo-96.webp?v=8.14" alt="Logo Portmonky" width="96" height="96">
+    app.innerHTML = `<div class="wrap"><section class="login card"><img class="logo big" src="img/logo-96.webp?v=8.15" alt="Logo Portmonky" width="96" height="96">
       <h1 class="wm">Portmonka</h1><p>Zvědavý účetní skřítek. Přihlas se přes Google, data se ukládají do tvého zabezpečeného prostoru ve Firestore.</p>
       <div class="btns" style="justify-content:center;margin-top:18px"><button type="button" class="btn solid" data-a="login">Přihlásit přes Google</button>
       <a class="btn ghost" href="?demo=1" style="text-decoration:none;display:inline-flex;align-items:center">Prohlédnout s ukázkovými daty</a></div></section></div>`;
@@ -105,9 +106,9 @@ function viewTed(I) {
   const groups = {}; for (const i of inv) { const k = i.invoiceId || ('solo:' + i.caseId + i.id); (groups[k] = groups[k] || []).push(i); }
   const gl = Object.entries(groups).map(([k, xs]) => ({ k, xs, no: xs[0].invoiceNo, at: xs[0].invoicedAt, sum: C.sumMinor(xs) })).sort((a, b) => a.at.localeCompare(b.at));
   const metrics = [
-    { k: 'Na cestě', v: K(tot.INVOICED), n: Math.round(tot.INVOICED / 100), sub: inv.length + ' ' + plural(inv.length, 'splátka vyfakturována', 'splátky vyfakturovány', 'splátek vyfakturováno') + ', nezaplaceno', c: '#f5b84a' },
-    { k: 'Přišlo · ' + C.monShort(T), v: K(inc.cur.total), n: Math.round(inc.cur.total / 100), sub: 'skutečné platby tento měsíc', c: '#f1eefe' },
-    { k: 'Celkem čeká', v: K(tot.WAITING + tot.READY), n: Math.round((tot.WAITING + tot.READY) / 100), sub: 'lze fakturovat + budoucí nároky', c: '#5eead4' },
+    { k: 'Na cestě', v: K(tot.INVOICED), n: Math.round(tot.INVOICED / 100), sub: inv.length + ' ' + plural(inv.length, 'splátka vyfakturována', 'splátky vyfakturovány', 'splátek vyfakturováno') + ', nezaplaceno', c: 'var(--gold)' },
+    { k: 'Přišlo · ' + C.monShort(T), v: K(inc.cur.total), n: Math.round(inc.cur.total / 100), sub: 'skutečné platby tento měsíc', c: 'var(--fg)' },
+    { k: 'Celkem čeká', v: K(tot.WAITING + tot.READY), n: Math.round((tot.WAITING + tot.READY) / 100), sub: 'lze fakturovat + budoucí nároky', c: 'var(--mint)' },
     urodaTile(),
     domoveoTile(I),
     offersTile(S.offers)
@@ -115,7 +116,7 @@ function viewTed(I) {
   return `<div class="grid">${invRemindTile(I)}
   <div class="hero">
     <section class="mission"><div class="stars" aria-hidden="true"><i style="left:8%;top:18%"></i><i style="left:72%;top:12%;animation-delay:1s"></i><i style="left:88%;top:62%;animation-delay:2s"></i><i style="left:40%;top:80%;animation-delay:.5s"></i><i style="left:58%;top:30%;animation-delay:1.6s"></i></div>
-      <div class="k" style="color:#8fd8cc">Dnešní mise</div>
+      <div class="k" style="color:var(--mint)">Dnešní mise</div>
       <div class="big" data-roll="mise" data-v="${Math.round(readySum / 100)}">${K(readySum)}</div>
       <p>můžeš vyfakturovat hned teď · ${ready.length} ${plural(ready.length, 'položka čeká', 'položky čekají', 'položek čeká')} na tvůj krok</p>
       ${ready.map(i => `<div class="act"><input class="chk" type="checkbox" data-a="sel" data-c="${i.caseId}" data-i="${i.id}" aria-label="Vybrat ${esc(i.title)}" ${S.sel.has(i.caseId + '|' + i.id) ? 'checked' : ''}>
@@ -136,12 +137,12 @@ function viewTed(I) {
   </div>
   <div class="grid g4 m6">${metrics.map(m => `<div class="card metric${m.a ? ' click' : ''}"${m.a ? ` data-a="tab" data-t="${m.a}" role="button" tabindex="0"` : ''}><div class="k">${m.k}</div><div class="v" style="color:${m.c}"${m.n != null ? ` data-roll="m-${esc(m.k)}" data-v="${m.n}"` : ''}>${m.v}</div><span>${m.sub}</span></div>`).join('')}</div>
   ${gl.length ? `<section class="card"><div class="k">Na cestě · vyfakturováno, čeká na platbu</div>
-    ${gl.map(g => `<div class="row"><div class="l"><b>${g.no ? 'Faktura ' + esc(g.no) : esc(SRC(g.xs[0].source).name + ' · ' + g.xs[0].title)}</b><span>${g.xs.length > 1 || g.no ? g.xs.map(x => esc(x.title)).join(', ') + ' · ' : esc(g.xs[0].label) + ' · '}vyfakturováno ${C.fmtDateShort(g.at)} (${C.diffDays(g.at, T)} dní${C.diffDays(g.at, T) > C.FORECAST_RULE.payAfterInvoice ? ' · <b style="color:#ff7a6b;display:inline">po termínu platby</b>' : ''})</span></div>
+    ${gl.map(g => `<div class="row"><div class="l"><b>${g.no ? 'Faktura ' + esc(g.no) : esc(SRC(g.xs[0].source).name + ' · ' + g.xs[0].title)}</b><span>${g.xs.length > 1 || g.no ? g.xs.map(x => esc(x.title)).join(', ') + ' · ' : esc(g.xs[0].label) + ' · '}vyfakturováno ${C.fmtDateShort(g.at)} (${C.diffDays(g.at, T)} dní${C.diffDays(g.at, T) > C.FORECAST_RULE.payAfterInvoice ? ' · <b style="color:var(--coral);display:inline">po termínu platby</b>' : ''})</span></div>
       <span class="mono">${K(g.sum)}</span><button type="button" class="btn" data-a="pay-group" data-k="${esc(g.k)}">Přišlo na účet</button></div>`).join('')}</section>` : ''}
   ${timeline(I, T)}
   ${viewOffers(S.offers)}
   <section class="card"><div class="k">Výhled nároků · další měsíce</div>
-    <div class="outl">${C.outlook(I, T).map(o => `<div><span class="meta">${o.label}</span><b>${K(o.total)}</b><span class="meta">${o.count} ${plural(o.count, 'splátka', 'splátky', 'splátek')}</span>${o.expect ? `<span class="meta" style="color:#c49bff">+ 👻 ${K(o.expect)} · ${o.expectCount} ${plural(o.expectCount, 'servis', 'servisy', 'servisů')} v plánu</span>` : ''}</div>`).join('')}</div>
+    <div class="outl">${C.outlook(I, T).map(o => `<div><span class="meta">${o.label}</span><b>${K(o.total)}</b><span class="meta">${o.count} ${plural(o.count, 'splátka', 'splátky', 'splátek')}</span>${o.expect ? `<span class="meta" style="color:var(--vio2)">+ 👻 ${K(o.expect)} · ${o.expectCount} ${plural(o.expectCount, 'servis', 'servisy', 'servisů')} v plánu</span>` : ''}</div>`).join('')}</div>
     ${wait.some(i => C.isBlocked(i) && !C.expectedClaim(i)) ? `<div class="meta" style="margin-top:10px">👻 = Domoveo zakázky s naplánovaným servisem (přijdou, jen když servis proběhne). K tomu čeká na podmínku bez termínu ${K(C.sumMinor(wait.filter(i => C.isBlocked(i) && !C.expectedClaim(i))))} (2. části GOORN, servisy bez termínu). Datum zatím neznáme, proto nejsou ve výhledu.</div>` : ''}
   </section></div>`;
 }
@@ -151,12 +152,12 @@ function domoveoTile(I) {
   const ids = [...new Set(xs.map(i => i.caseId))];
   const net = ids.reduce((a, id) => { const c = caseById(id) || {}; const amt = C.sumMinor(xs.filter(i => i.caseId === id)); return a + (Number(c.priceNetMinor) || Math.round(amt / ((Number(c.rate) || 17) / 100))); }, 0);
   const gross = Math.round(net * 1.12 / 100) * 100;
-  return { k: 'Domoveo · čeká na servis', v: K(C.sumMinor(xs)), sub: ids.length + ' ' + plural(ids.length, 'zakázka', 'zakázky', 'zakázek') + ' · tržba ≈ ' + K(gross) + ' s DPH', c: '#6ea8ff' };
+  return { k: 'Domoveo · čeká na servis', v: K(C.sumMinor(xs)), sub: ids.length + ' ' + plural(ids.length, 'zakázka', 'zakázky', 'zakázek') + ' · tržba ≈ ' + K(gross) + ' s DPH', c: 'var(--blue)' };
 }
 function offersTile(o) {
   const n = o && Array.isArray(o.polozky) ? o.polozky.length : 0;
-  if (!n) return { k: 'Co kdyby · nabídky', v: K(0), sub: 'žádná nabídka nečeká na odsouhlasení', c: '#c49bff' };
-  return { k: 'Co kdyby · nabídky', v: K(o.realneMinor ?? o.celkemMinor), sub: (o.uspesnostPct != null ? 'reálně při ' + o.uspesnostPct + ' % · ' : '') + n + ' ' + plural(n, 'nabídka', 'nabídky', 'nabídek') + ' · kdyby všichni ' + K(o.celkemMinor), c: '#c49bff' };
+  if (!n) return { k: 'Co kdyby · nabídky', v: K(0), sub: 'žádná nabídka nečeká na odsouhlasení', c: 'var(--vio2)' };
+  return { k: 'Co kdyby · nabídky', v: K(o.realneMinor ?? o.celkemMinor), sub: (o.uspesnostPct != null ? 'reálně při ' + o.uspesnostPct + ' % · ' : '') + n + ' ' + plural(n, 'nabídka', 'nabídky', 'nabídek') + ' · kdyby všichni ' + K(o.celkemMinor), c: 'var(--vio2)' };
 }
 function viewOffers(o) {
   const ps = o && Array.isArray(o.polozky) ? o.polozky : [];
@@ -183,7 +184,7 @@ function timeline(I, T) {
   }).join('');
   return `<section class="card">
     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap"><div><div class="k">Živá časová osa</div><div style="font-weight:700;margin-top:2px">Kam peníze putují · 2 měsíce zpět, 10 dopředu</div></div>
-      <div class="legend"><span><i style="background:#a59fc9"></i>proplaceno</span><span><i style="background:#5eead4;border-color:#5eead4"></i>lze fakturovat</span><span><i style="box-shadow:inset 0 0 0 3px #a59fc9"></i>vyfakturováno</span><span><i style="border-style:dashed"></i>čeká</span></div></div>
+      <div class="legend"><span><i style="background:var(--mu)"></i>proplaceno</span><span><i style="background:var(--mint);border-color:var(--mint)"></i>lze fakturovat</span><span><i style="box-shadow:inset 0 0 0 3px var(--mu)"></i>vyfakturováno</span><span><i style="border-style:dashed"></i>čeká</span></div></div>
     <div class="tlwrap"><div class="tl" style="height:${38 + shown.length * 52}px">${ticks}${lanes}<div class="today" style="left:calc(92px + (100% - 92px) * ${pos(T) / 100})"><b>DNES</b></div></div></div>
     <div class="meta">Ťukni na bod: otevře se případ. Splátky bez data (čekají na podmínku) najdeš v Případech.</div>
     <div style="margin-top:14px"><span class="flag">ODHAD · NE GARANCE</span> <span class="meta">Kolik by mělo přijít na účet (pravidlo: fakturace do 3 dnů od nároku, platba do 3 dnů po faktuře)</span></div>
@@ -215,7 +216,7 @@ function viewOrbit(I) {
   const cushPct = led.cushionTarget ? Math.min(100, Math.round(led.cushion / led.cushionTarget * 100)) : 0;
   return `<div class="grid">
   <div class="hero">
-    <section class="mission ormis"><div class="k" style="color:#8fd8cc">Orbit · ${C.monShort(T)} ${T.slice(0, 4)}</div>
+    <section class="mission ormis"><div class="k" style="color:var(--mint)">Orbit · ${C.monShort(T)} ${T.slice(0, 4)}</div>
       <div class="big">${o.pct} %</div>
       <p>nákladů měsíce (${K(o.total)}) pokrývají příjmy · jistě ${o.pctSure} %, s fakturami ${o.pctLikely} %</p>
       <div class="obar" role="img" aria-label="Pokrytí nákladů ${o.pct} procent"><i class="s" style="width:${pc(L.sure)}%"></i><i class="l" style="width:${pc(L.likely) - pc(L.sure)}%"></i><i class="f" style="width:${pc(L.all) - pc(L.likely)}%"></i><i class="e" style="width:${Math.max(0, pc(L.all + L.expect) - pc(L.all))}%"></i></div>
@@ -253,7 +254,7 @@ function viewPrijem(I) {
   return `<div class="grid g2">
   <section class="card">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
-      <div><div class="k">Skutečně přišlo · ${per}</div><div class="disp" style="font-weight:800;font-size:clamp(32px,5vw,50px);color:#5eead4;margin-top:6px">${K(cur.total)}</div><div class="meta">podle skutečného data platby · z toho bonus ${K(cur.bonus)}</div></div>
+      <div><div class="k">Skutečně přišlo · ${per}</div><div class="disp" style="font-weight:800;font-size:clamp(32px,5vw,50px);color:var(--mint);margin-top:6px">${K(cur.total)}</div><div class="meta">podle skutečného data platby · z toho bonus ${K(cur.bonus)}</div></div>
       <div class="seg2"><button type="button" class="${S.incMode === 'month' ? 'on' : ''}" data-a="inc" data-m="month">Měsíc</button><button type="button" class="${S.incMode === 'week' ? 'on' : ''}" data-a="inc" data-m="week">Týden</button><button type="button" class="${S.incMode === 'year' ? 'on' : ''}" data-a="inc" data-m="year">Rok</button></div>
     </div>
     <div class="bars">${bars}</div>
@@ -274,7 +275,7 @@ function viewStats(I, T) {
   const srcs = C.SOURCE_ORDER.filter(s => st.years.some(r => r.bySrc[s]));
   return `<section class="card" style="margin-top:14px"><div class="k">Statistiky · skutečné platby</div>
     <div class="outl" style="margin-top:10px">
-      <div><span class="meta">${y} do dneška</span><b>${K(st.ytd)}</b><span class="meta">${st.yoyPct == null ? 'loni ve stejném období nic' : `<b style="color:${up ? '#4ade9b' : '#ff8a7a'}">${up ? '+' : ''}${st.yoyPct} %</b> proti ${K(st.lastYtd)} loni`}</span></div>
+      <div><span class="meta">${y} do dneška</span><b>${K(st.ytd)}</b><span class="meta">${st.yoyPct == null ? 'loni ve stejném období nic' : `<b style="color:${up ? 'var(--green)' : 'var(--coral2)'}">${up ? '+' : ''}${st.yoyPct} %</b> proti ${K(st.lastYtd)} loni`}</span></div>
       <div><span class="meta">celý rok ${Number(y) - 1}</span><b>${K(st.lastYear)}</b><span class="meta">průměr ${K((st.years.find(r => r.year === String(Number(y) - 1)) || {}).avgMonth || 0)} / měsíc</span></div>
       ${st.best ? `<div><span class="meta">nejlepší měsíc</span><b>${K(st.best.total)}</b><span class="meta">${C.monShort(st.best.month + '-01')} ${st.best.month.slice(0, 4)}</span></div>` : ''}
     </div>
@@ -305,7 +306,7 @@ function seedCard(x) {
     <span class="src" style="color:${col}">${SI(x.source, 16)}<span>${x.source === 'Pro-Factor' ? 'Inzerát' : 'GOORN · prohlídka'}</span><span class="cd">${x.approx ? '≈ ' : ''}${C.fmtDateShort(x.date)}</span></span>
     <span class="t">${esc(x.title)}</span>
     <span class="sbar seed"><i></i></span>
-    <span class="cfoot"><span class="lead" style="color:#9be37a">🌱 klíčí</span><span class="mono">${K(x.amountMinor)}</span></span>
+    <span class="cfoot"><span class="lead" style="color:var(--lime)">🌱 klíčí</span><span class="mono">${K(x.amountMinor)}</span></span>
     <span class="nx">${esc(x.source === 'Pro-Factor' ? (x.note ? x.note + ' · ' : '') + 'čeká na uzavření města' : 'čeká na instalaci')}</span></button>`;
 }
 function caseCard(c, T) {
@@ -347,7 +348,7 @@ function viewPripady(I) {
     return `<section class="cgrp${shut ? ' shut' : ''}"><button type="button" class="cgh" data-a="grp-toggle" data-k="${g.key}" aria-expanded="${!shut}">
       <span class="cgt"><b>${label(g.key)}</b><span class="meta">${nCase ? nCase + ' ' + plural(nCase, 'případ', 'případy', 'případů') : ''}${nCase && nSeed ? ' · ' : ''}${nSeed ? '🌱 ' + nSeed + ' ' + plural(nSeed, 'prodej', 'prodeje', 'prodejů') : ''}</span><span class="mono">${K(C.sumMinor(xs))}</span><span class="chev" aria-hidden="true">${shut ? '▸' : '▾'}</span></span>
       <span class="gbar">${['PAID', 'INVOICED', 'READY', 'WAITING', 'LOST'].map(st => by(st) ? `<i style="width:${by(st) / tot * 100}%;background:${C.ST_COLOR[st]}"></i>` : '').join('')}</span>
-      <span class="gchips">${chips}${seedSum ? `<span style="color:#9be37a">🌱 zaseto ${K(seedSum)}</span>` : ''}</span></button>
+      <span class="gchips">${chips}${seedSum ? `<span style="color:var(--lime)">🌱 zaseto ${K(seedSum)}</span>` : ''}</span></button>
       ${shut ? '' : `<div class="cases">${g.cases.map(c => c.seed ? seedCard(c.seed) : caseCard(c, T)).join('')}</div>`}</section>`;
   }).join('');
   return `<div class="grid">
@@ -415,7 +416,7 @@ function viewSouhrn(I) {
   </section>
   <section class="card"><div class="k">Z čeho se vesmír skládá</div>
     ${parts.map(p => `<div class="row"><div class="l"><b><span class="chip" style="color:${C.ST_COLOR[p[0]]};padding:0">●</span> ${p[1]}</b><span>${p[2]}</span></div><span class="mono">${K(t[p[0]])}</span></div>`).join('')}
-    <div class="row"><div class="l"><b>Zbývá</b><span>celkem − proplaceno − propadlo</span></div><span class="mono" style="color:#5eead4">${K(t.remaining)}</span></div>
+    <div class="row"><div class="l"><b>Zbývá</b><span>celkem − proplaceno − propadlo</span></div><span class="mono" style="color:var(--mint)">${K(t.remaining)}</span></div>
     <div class="k" style="margin-top:18px">Podle zdroje</div>
     <div class="share">${src.map(s => `<i style="width:${s.total / all * 100}%;background:${SRC(s.source).color}"></i>`).join('')}</div>
     ${src.map(s => `<div class="row"><div class="l"><b style="color:${SRC(s.source).color}">${SI(s.source, 22)}${SRC(s.source).name}</b><span>proplaceno ${K(s.PAID)} · zbývá ${K(s.remaining)}${s.LOST ? ' · propadlo ' + K(s.LOST) : ''}</span></div><span class="mono">${K(s.total)}</span></div>`).join('')}
@@ -439,7 +440,7 @@ const kShort = m => { const v = m / 100; return v >= 1000 ? (Math.round(v / 100)
 function urSeeds() { return U.seeds(S.cases, S.uroda, today()); }
 function urodaTile() {
   const T = today(), r = U.range('week', T), sm = U.summarize(U.inRange(urSeeds(), r));
-  return { k: 'Zaseto · tento týden', v: K(sm.live), sub: sm.count + ' ' + plural(sm.count, 'obchod', 'obchody', 'obchodů') + ' · 🌾 ' + K(sm.done) + ' už sklizeno', c: '#9be37a', a: 'uroda' };
+  return { k: 'Zaseto · tento týden', v: K(sm.live), sub: sm.count + ' ' + plural(sm.count, 'obchod', 'obchody', 'obchodů') + ' · 🌾 ' + K(sm.done) + ' už sklizeno', c: 'var(--lime)', a: 'uroda' };
 }
 function urLabel(v, r) {
   if (v === 'day') return DNL[dow(r.from)] + ' ' + C.fmtDate(r.from);
@@ -452,8 +453,8 @@ function urChart(cols, view) {
   const step0 = max / 4 / 100, mag = Math.pow(10, Math.floor(Math.log10(step0))), step = [1, 2, 2.5, 5, 10].map(x => x * mag).find(x => x >= step0) * 100, top = Math.ceil(max / step) * step;
   const y = v => Tp + (H - Tp - B) * (1 - v / top), bw = (W - L - R) / cols.length, gap = cols.length > 20 ? 2 : bw * .28;
   const srcs = U.UR_SOURCES;
-  let h = '<defs>' + srcs.map((s, k) => `<pattern id="ur-h${k}" width="9" height="9" patternUnits="userSpaceOnUse"><rect width="9" height="9" fill="${SRC(s).color}" fill-opacity=".16"/><ellipse cx="2.5" cy="2.5" rx="1.6" ry="2.2" fill="${SRC(s).color}" transform="rotate(-25 2.5 2.5)"/><ellipse cx="7" cy="7" rx="1.6" ry="2.2" fill="${SRC(s).color}" transform="rotate(20 7 7)"/></pattern><pattern id="ur-g${k}" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="${SRC(s).color}"/><path d="M4 0v8M4 2l-2-1.5M4 2l2-1.5M4 5l-2-1.5M4 5l2-1.5" stroke="#0c0a1d" stroke-opacity=".22" stroke-width="1" fill="none"/></pattern>`).join('') + '</defs>';
-  for (let v = 0; v <= top; v += step) h += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="#28224a"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end" fill="#a59fc9" font-size="11" font-family="JetBrains Mono,monospace">${kShort(v)}</text>`;
+  let h = '<defs>' + srcs.map((s, k) => `<pattern id="ur-h${k}" width="9" height="9" patternUnits="userSpaceOnUse"><rect width="9" height="9" fill="${SRC(s).color}" fill-opacity=".16"/><ellipse cx="2.5" cy="2.5" rx="1.6" ry="2.2" fill="${SRC(s).color}" transform="rotate(-25 2.5 2.5)"/><ellipse cx="7" cy="7" rx="1.6" ry="2.2" fill="${SRC(s).color}" transform="rotate(20 7 7)"/></pattern><pattern id="ur-g${k}" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="${SRC(s).color}"/><path d="M4 0v8M4 2l-2-1.5M4 2l2-1.5M4 5l-2-1.5M4 5l2-1.5" stroke="var(--bg)" stroke-opacity=".22" stroke-width="1" fill="none"/></pattern>`).join('') + '</defs>';
+  for (let v = 0; v <= top; v += step) h += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--s3)"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end" fill="var(--mu)" font-size="11" font-family="JetBrains Mono,monospace">${kShort(v)}</text>`;
   cols.forEach((c, i) => {
     const x = L + i * bw + gap / 2, w = bw - gap; let acc = 0;
     const lab = view === 'day' ? c.label : c.day ? (view === 'week' ? DNS[i] + ' ' + Number(c.day.slice(8)) : String(Number(c.day.slice(8)))) : c.month ? C.monShort(c.label) : c.label;
@@ -461,9 +462,9 @@ function urChart(cols, view) {
     h += `<g class="urbar${click ? ' click' : ''}" ${click} ${click ? 'tabindex="0" role="button"' : ''}><title>${esc(lab)}: ${K(c.sum.live)}</title>`;
     srcs.forEach((s, k) => ['done', 'cond'].forEach(st => { const v = c.xs.filter(z => z.source === s && z.st === st).reduce((a, z) => a + z.amountMinor, 0); if (!v) return; const y1 = y(acc + v), y0 = y(acc); h += `<rect x="${x}" y="${y1}" width="${w}" height="${Math.max(0, y0 - y1 - 1)}" rx="${cols.length > 20 ? 1.5 : 4}" fill="url(#ur-${st === 'done' ? 'g' : 'h'}${k})"/>`; acc += v; }));
     if (c.sum.lost) { const y1 = y(acc + c.sum.lost), y0 = y(acc); h += `<rect x="${x + 1}" y="${y1}" width="${w - 2}" height="${Math.max(0, y0 - y1 - 2)}" rx="3" fill="#8a6a4a" fill-opacity=".15" stroke="#b08860" stroke-dasharray="2 3" stroke-width="1.5"/>`; if (cols.length <= 14 && y0 - y1 > 16) h += `<text x="${x + w / 2}" y="${(y1 + y0) / 2 + 5}" text-anchor="middle" font-size="13">🍂</text>`; acc += c.sum.lost; }
-    if (c.sum.live && cols.length <= 14) h += `<text x="${x + w / 2}" y="${y(acc) - 6}" text-anchor="middle" fill="#f1eefe" font-size="12.5" font-weight="800" font-family="Manrope,sans-serif">${kShort(c.sum.live)}</text>`;
-    if (cols.length <= 14 || Number(lab) % 5 === 1) h += `<text x="${x + w / 2}" y="${H - B + 16}" text-anchor="middle" fill="${c.future ? '#4a4373' : c.day && dow(c.day) >= 5 ? '#6b6494' : '#c3bde6'}" font-size="11.5" font-family="JetBrains Mono,monospace">${esc(lab)}</text>`;
-    if (c.day === today() || c.cur) h += `<circle cx="${x + w / 2}" cy="${H - B + 23}" r="2.5" fill="#5eead4"/>`;
+    if (c.sum.live && cols.length <= 14) h += `<text x="${x + w / 2}" y="${y(acc) - 6}" text-anchor="middle" fill="var(--fg)" font-size="12.5" font-weight="800" font-family="Manrope,sans-serif">${kShort(c.sum.live)}</text>`;
+    if (cols.length <= 14 || Number(lab) % 5 === 1) h += `<text x="${x + w / 2}" y="${H - B + 16}" text-anchor="middle" fill="${c.future ? '#4a4373' : c.day && dow(c.day) >= 5 ? '#6b6494' : 'var(--fg2)'}" font-size="11.5" font-family="JetBrains Mono,monospace">${esc(lab)}</text>`;
+    if (c.day === today() || c.cur) h += `<circle cx="${x + w / 2}" cy="${H - B + 23}" r="2.5" fill="var(--mint)"/>`;
     h += '</g>';
   });
   return `<svg class="urchart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Graf úrody">${h}</svg>`;
@@ -517,7 +518,7 @@ function viewUroda() {
 
 /* ---------------- DOMOVEO PŘEHLED MARŽÍ (20. 11. 2026) ---------------- */
 const DM_VIEWS = [['day', 'Den'], ['week', 'Týden'], ['month', 'Měsíc']];
-const DM_COL = { signed: '#5eead4', serviced: '#f5b84a' };
+const DM_COL = { signed: 'var(--mint)', serviced: 'var(--gold)' };
 function dmLabel(v, r) { return v === 'day' ? DNL[dow(r.from)] + ' ' + C.fmtDate(r.from) : v === 'week' ? C.fmtDateShort(r.from) + ' – ' + C.fmtDate(r.to) : C.monShort(r.from) + ' ' + r.from.slice(0, 4); }
 function dmChart(cols) {
   const W = 720, H = 230, L = 46, R = 10, Tp = 20, B = 44;
@@ -525,15 +526,15 @@ function dmChart(cols) {
   const step0 = max / 4 / 100, mag = Math.pow(10, Math.floor(Math.log10(step0))), step = [1, 2, 2.5, 5, 10].map(x => x * mag).find(x => x >= step0) * 100, top = Math.ceil(max / step) * step;
   const y = v => Tp + (H - Tp - B) * (1 - v / top), bw = (W - L - R) / cols.length, many = cols.length > 14, g = many ? 1 : bw * .18, w = (bw - g * 2) / 2;
   let h = '';
-  for (let v = 0; v <= top; v += step) h += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="#28224a"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end" fill="#a59fc9" font-size="11" font-family="JetBrains Mono,monospace">${kShort(v)}</text>`;
+  for (let v = 0; v <= top; v += step) h += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--s3)"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end" fill="var(--mu)" font-size="11" font-family="JetBrains Mono,monospace">${kShort(v)}</text>`;
   cols.forEach((c, i) => {
     const x = L + i * bw + g, lab = many ? String(Number(c.day.slice(8))) : DNS[dow(c.day)] + ' ' + Number(c.day.slice(8));
     const click = !c.future ? `data-a="dm-day" data-d="${c.day}"` : '';
     h += `<g class="urbar${click ? ' click' : ''}" ${click} ${click ? 'tabindex="0" role="button"' : ''}><title>${esc(lab)}: podepsáno ${K(c.signed)}, odservisováno ${K(c.serviced)}, schůzek ${c.h}</title>`;
     [['signed', 0], ['serviced', 1]].forEach(([k, j]) => { const v = c[k]; if (v) h += `<rect x="${x + j * w}" y="${y(v)}" width="${w - 1}" height="${Math.max(1, y(0) - y(v))}" rx="${many ? 1.5 : 4}" fill="${DM_COL[k]}" fill-opacity="${c.future ? .35 : .9}"/>`; });
-    if (!many || Number(lab) % 5 === 1) h += `<text x="${x + w}" y="${H - B + 16}" text-anchor="middle" fill="${c.future ? '#4a4373' : dow(c.day) >= 5 ? '#6b6494' : '#c3bde6'}" font-size="11.5" font-family="JetBrains Mono,monospace">${esc(lab)}</text>`;
-    if (!many && (c.h || c.p)) h += `<text x="${x + w}" y="${H - B + 32}" text-anchor="middle" fill="#a59fc9" font-size="11" font-family="JetBrains Mono,monospace">${c.p && !c.h ? '(' + c.p + ')' : c.h + '×'}</text>`;
-    if (c.day === today()) h += `<circle cx="${x + w}" cy="${H - B + 40}" r="2.5" fill="#5eead4"/>`;
+    if (!many || Number(lab) % 5 === 1) h += `<text x="${x + w}" y="${H - B + 16}" text-anchor="middle" fill="${c.future ? '#4a4373' : dow(c.day) >= 5 ? '#6b6494' : 'var(--fg2)'}" font-size="11.5" font-family="JetBrains Mono,monospace">${esc(lab)}</text>`;
+    if (!many && (c.h || c.p)) h += `<text x="${x + w}" y="${H - B + 32}" text-anchor="middle" fill="var(--mu)" font-size="11" font-family="JetBrains Mono,monospace">${c.p && !c.h ? '(' + c.p + ')' : c.h + '×'}</text>`;
+    if (c.day === today()) h += `<circle cx="${x + w}" cy="${H - B + 40}" r="2.5" fill="var(--mint)"/>`;
     h += '</g>';
   });
   return `<svg class="urchart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Graf marží Domovea po dnech">${h}</svg>`;
@@ -561,13 +562,13 @@ function viewDomoveo() {
     <div class="usrcs dmtiles" style="margin-top:10px">
       ${tile('Podepsáno', K(o.podepsano.minor), o.podepsano.count + ' ' + plural(o.podepsano.count, 'objednávka', 'objednávky', 'objednávek') + ' · podle dne podpisu', DM_COL.signed)}
       ${tile('Odservisováno', K(o.odservisovano.minor), o.odservisovano.count + ' ' + plural(o.odservisovano.count, 'zakázka', 'zakázky', 'zakázek') + ' · podle dne servisu', DM_COL.serviced)}
-      ${tile('Součet', K(o.soucet), 'podepsáno + odservisováno', '#f1eefe')}</div>
+      ${tile('Součet', K(o.soucet), 'podepsáno + odservisováno', 'var(--fg)')}</div>
     <div class="meta" style="margin-top:6px">Jedna zakázka se může objevit v obou sloupcích (den podpisu i den servisu), součet je prostý. Marže = provize v celých Kč, nárok z toho není.</div></section>
     <section class="card"><div class="k">Schůzky a úspěšnost</div>
       <div class="usrcs dmtiles" style="margin-top:8px">
-        ${tile('Schůzky', String(o.schuzky.h), 'provedeno' + (o.schuzky.z ? ' · ' + o.schuzky.z + ' zrušeno' : '') + (o.schuzky.p ? ' · ' + o.schuzky.p + ' naplánováno' : ''), '#c3bde6')}
+        ${tile('Schůzky', String(o.schuzky.h), 'provedeno' + (o.schuzky.z ? ' · ' + o.schuzky.z + ' zrušeno' : '') + (o.schuzky.p ? ' · ' + o.schuzky.p + ' naplánováno' : ''), 'var(--fg2)')}
         ${tile('Uzavřeno', String(o.uzavrene), plural(o.uzavrene, 'objednávka', 'objednávky', 'objednávek') + (o.propadle.length ? ' · ' + o.propadle.length + ' storno' : ''), DM_COL.signed)}
-        ${tile('Úspěšnost', o.uspesnostPct == null ? '–' : o.uspesnostPct + ' %', 'uzavřeno ÷ provedené schůzky', '#c49bff')}</div>
+        ${tile('Úspěšnost', o.uspesnostPct == null ? '–' : o.uspesnostPct + ' %', 'uzavřeno ÷ provedené schůzky', 'var(--vio2)')}</div>
       ${S.schuzky ? '' : '<div class="warnbox" style="margin-top:10px">Schůzky po dnech zatím nedorazily z úlohy „Domoveo provize do Portmonky“. Počty schůzek a predikce se objeví po jejím dalším běhu.</div>'}</section>
     ${dmForecast(o, v)}
     <section class="card"><div class="ukey"><span style="color:${DM_COL.signed}">■ <b>podepsáno</b></span><span style="color:${DM_COL.serviced}">■ <b>odservisováno</b></span><span>pod dnem: <b>N×</b> provedené schůzky, <b>(N)</b> naplánované</span></div>${dmChart(cols)}${v !== 'day' ? '<div class="meta">Ťukni na sloupec a otevře se ten den.</div>' : ''}${old ? `<div class="meta">Schůzky naposledy aktualizovány ${C.fmtDate(old)}.</div>` : ''}</section>
@@ -763,7 +764,7 @@ function openAdd() {
       ${chk(f, 'ex') ? `<div class="f2"><label class="f">1. část (Kč)<input name="p1" inputmode="decimal" value="3190"></label><label class="f">2. část (Kč)<input name="p2" inputmode="decimal" value="2530"></label></div>` : ''}`;
     else if (s === 'Domoveo.cz') {
       const bonus = radio(f, 'dmk') === 'bonus';
-      h = `<div class="seg2" style="margin:10px 0"><label class="btn ghost"><input type="radio" name="dmk" value="order" ${bonus ? '' : 'checked'} data-redraw style="accent-color:#5eead4;margin-right:6px">Zakázka</label><label class="btn ghost"><input type="radio" name="dmk" value="bonus" ${bonus ? 'checked' : ''} data-redraw style="accent-color:#5eead4;margin-right:6px">Měsíční bonus</label></div>` +
+      h = `<div class="seg2" style="margin:10px 0"><label class="btn ghost"><input type="radio" name="dmk" value="order" ${bonus ? '' : 'checked'} data-redraw style="accent-color:var(--mint);margin-right:6px">Zakázka</label><label class="btn ghost"><input type="radio" name="dmk" value="bonus" ${bonus ? 'checked' : ''} data-redraw style="accent-color:var(--mint);margin-right:6px">Měsíční bonus</label></div>` +
         (bonus ? `<div class="f2"><label class="f">Za měsíc<input name="bm" type="month" value="${C.addMonths(T, -1).slice(0, 7)}"></label><label class="f">Bonus (Kč)<input name="bonus" inputmode="decimal" placeholder="8 000–30 000"></label></div>
           <label class="f">Datum potvrzení Domoveem<input name="trig" type="date" value="${T}"></label>`
         : `<label class="f">Klient, obec<input name="title" required placeholder="např. Mačková, Trutnov"></label>
@@ -924,6 +925,7 @@ function handle(e) {
     case 'ur-shift': { const n = Number(el.dataset.d), a = S.urAnchor || today(); S.urAnchor = S.urView === 'day' ? C.addDays(a, n) : S.urView === 'week' ? C.addDays(a, 7 * n) : C.addMonths(C.startOfMonth(a), n); if (S.urAnchor > today()) S.urAnchor = today(); render(); break; }
     case 'login': store.signIn().catch(er => { console.error(er); toast('Přihlášení přes Google se nepodařilo.'); }); break;
     case 'logout': store.signOut(); break;
+    case 'theme': { const l = document.documentElement.dataset.theme !== 'light'; if (l) document.documentElement.dataset.theme = 'light'; else delete document.documentElement.dataset.theme; try { localStorage.setItem('pm.theme', l ? 'light' : 'dark'); } catch (_) {} const m = document.querySelector('meta[name=theme-color]'); if (m) m.content = l ? '#f4f3fb' : '#0c0a1d'; render(); break; }
     case 'calm': FX.setCalm(!FX.isCalm()); render(); toast(FX.isCalm() ? 'Klidný režim: bez animací.' : 'Animace zapnuty.'); break;
     case 'reload': reload().then(() => toast('Načteno.')); break;
     case 'add': openAdd(); break;
