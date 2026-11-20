@@ -347,3 +347,19 @@ a{color:var(--mint)}
 @keyframes sway{0%,100%{transform:rotate(-1.2deg)}50%{transform:rotate(1.2deg)}}
 .ustrip .c{animation:shimmerbg 3s linear infinite}
 @keyframes shimmerbg{to{background-position:8px 0,0 0}}
+
+/* audit B: hlavička na mobilu zabírá málo místa */
+.chk{position:relative}
+.chk::after{content:"";position:absolute;inset:-10px}
+@media (max-width:620px){
+  .top{position:static;margin-bottom:10px;padding:8px 12px}
+  .top-in{gap:8px}
+  .nav{flex-wrap:nowrap;gap:6px}
+  .ngrp.fin{flex:1 1 100%;padding:4px 6px;border:0;background:none;min-width:0}
+  .ngrp.fin .grp,.ngrp.obj{display:none}
+  .ntabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:2px}
+  .ntabs::-webkit-scrollbar{display:none}
+  .tab{flex:none}
+  .ibtn{width:40px;height:40px}
+  .user{gap:6px}
+}
