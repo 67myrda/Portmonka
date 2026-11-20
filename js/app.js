@@ -1,11 +1,11 @@
 // Portmonka 08 – UI nad deterministickým jádrem (core.js) a datovou vrstvou (store.js).
-import * as C from './core.js?v=8.16';
-import { createFirestoreStore, createMemoryStore } from './store.js?v=8.16';
-import * as O from './orbit.js?v=8.16';
-import * as U from './uroda.js?v=8.16';
-import * as DM from './domoveo.js?v=8.16';
-import * as INV from './invoice.js?v=8.16';
-import * as FX from './fx.js?v=8.16';
+import * as C from './core.js?v=8.17';
+import { createFirestoreStore, createMemoryStore } from './store.js?v=8.17';
+import * as O from './orbit.js?v=8.17';
+import * as U from './uroda.js?v=8.17';
+import * as DM from './domoveo.js?v=8.17';
+import * as INV from './invoice.js?v=8.17';
+import * as FX from './fx.js?v=8.17';
 
 const DEMO = new URLSearchParams(location.search).has('demo');
 const S = { podklady: {}, goornAdresy: {}, invoiceCfg: null, invoices: [], showInvCfg: false, tab: 'ted', user: null, cases: [], offers: null, uroda: null, schuzky: null, dmView: 'week', dmAnchor: null, urView: 'week', urAnchor: null, urSpan: 6, grp: 'month', collapsed: new Set(), opened: new Set(), loaded: false, filter: 'all', q: '', open: null, incMode: 'month', sel: new Set(), showWhy: false, busy: false, err: null };
@@ -25,8 +25,8 @@ const ICON = {
   reload: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>'
 };
 const MARK = '<svg class="mark" viewBox="0 0 40 40" aria-hidden="true"><rect x="3" y="11" width="34" height="24" rx="8" fill="none" stroke="#5eead4" stroke-width="3"></rect><path d="M11 11 C11 4 29 4 29 11" fill="none" stroke="#b493ff" stroke-width="3" stroke-linecap="round"></path><circle cx="20" cy="23" r="4" fill="#5eead4"></circle><circle cx="31" cy="6" r="2" fill="#f5b84a"></circle></svg>';
-const ELF = (pose = 'klid', size = 96) => `<img class="elfimg" src="img/elf/${pose}.webp?v=8.16" alt="Skřítek Portmonky" width="${size}" height="${size}" loading="lazy">`;
-const SI = (s, sz = 22) => SRC(s).icon ? `<img class="si" src="img/src/${SRC(s).icon}.webp?v=8.16" alt="" width="${sz}" height="${sz}" loading="lazy">` : SRC(s).emoji ? `<span class="si si-e" style="font-size:${Math.round(sz * .8)}px" aria-hidden="true">${SRC(s).emoji}</span>` : '';
+const ELF = (pose = 'klid', size = 96) => `<img class="elfimg" src="img/elf/${pose}.webp?v=8.17" alt="Skřítek Portmonky" width="${size}" height="${size}" loading="lazy">`;
+const SI = (s, sz = 22) => SRC(s).icon ? `<img class="si" src="img/src/${SRC(s).icon}.webp?v=8.17" alt="" width="${sz}" height="${sz}" loading="lazy">` : SRC(s).emoji ? `<span class="si si-e" style="font-size:${Math.round(sz * .8)}px" aria-hidden="true">${SRC(s).emoji}</span>` : '';
 
 function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 2600); }
 
@@ -53,7 +53,7 @@ function header() {
   const tf = [['ted', 'Teď'], ['orbit', 'Orbit'], ['uroda', 'Úroda'], ['domoveo', 'Domoveo'], ['prijem', 'Příjem'], ['pripady', 'Případy'], ['souhrn', 'Souhrn'], ['faktury', 'Faktury']];
   const tx = [['obj', 'Objevitel'], ['lab', 'Laboratoř']];
   return `<header class="top"><div class="top-in">
-    <div class="brand"><img class="logo" src="img/logo-96.webp?v=8.16" alt="" width="44" height="44"><div><b class="wm">Portmonka</b><small>zvědavý účetní skřítek</small></div></div>
+    <div class="brand"><img class="logo" src="img/logo-96.webp?v=8.17" alt="" width="44" height="44"><div><b class="wm">Portmonka</b><small>zvědavý účetní skřítek</small></div></div>
     <nav class="nav" aria-label="Pohledy">
       <div class="ngrp fin" role="group" aria-labelledby="ng-fin"><span class="grp" id="ng-fin">Finance</span><div class="ntabs">${tf.map(t => `<button type="button" class="tab${S.tab === t[0] ? ' on' : ''}" data-a="tab" data-t="${t[0]}">${t[1]}</button>`).join('')}</div></div>
       <div class="ngrp obj" role="group" aria-labelledby="ng-obj"><span class="grp" id="ng-obj">Objevování · připravuju</span><div class="ntabs">${tx.map(t => `<button type="button" class="tab x${S.tab === t[0] ? ' on' : ''}" data-a="tab" data-t="${t[0]}">${t[1]}</button>`).join('')}</div></div></nav>
@@ -68,7 +68,7 @@ function header() {
 function render() {
   const app = $('#app');
   if (!S.user) {
-    app.innerHTML = `<div class="wrap"><section class="login card"><img class="logo big" src="img/logo-96.webp?v=8.16" alt="Logo Portmonky" width="96" height="96">
+    app.innerHTML = `<div class="wrap"><section class="login card"><img class="logo big" src="img/logo-96.webp?v=8.17" alt="Logo Portmonky" width="96" height="96">
       <h1 class="wm">Portmonka</h1><p>Zvědavý účetní skřítek. Přihlas se přes Google, data se ukládají do tvého zabezpečeného prostoru ve Firestore.</p>
       <div class="btns" style="justify-content:center;margin-top:18px"><button type="button" class="btn solid" data-a="login">Přihlásit přes Google</button>
       <a class="btn ghost" href="?demo=1" style="text-decoration:none;display:inline-flex;align-items:center">Prohlédnout s ukázkovými daty</a></div></section></div>`;
@@ -106,8 +106,8 @@ function viewTed(I) {
   const groups = {}; for (const i of inv) { const k = i.invoiceId || ('solo:' + i.caseId + i.id); (groups[k] = groups[k] || []).push(i); }
   const gl = Object.entries(groups).map(([k, xs]) => ({ k, xs, no: xs[0].invoiceNo, at: xs[0].invoicedAt, sum: C.sumMinor(xs) })).sort((a, b) => a.at.localeCompare(b.at));
   const metrics = [
-    { k: 'Na cestě', v: K(tot.INVOICED), n: Math.round(tot.INVOICED / 100), sub: inv.length + ' ' + plural(inv.length, 'splátka vyfakturována', 'splátky vyfakturovány', 'splátek vyfakturováno') + ', nezaplaceno', c: 'var(--gold)' },
-    { k: 'Přišlo · ' + C.monShort(T), v: K(inc.cur.total), n: Math.round(inc.cur.total / 100), sub: 'skutečné platby tento měsíc', c: 'var(--fg)' },
+    { k: 'Na cestě', fx: 'way', v: K(tot.INVOICED), n: Math.round(tot.INVOICED / 100), sub: inv.length + ' ' + plural(inv.length, 'splátka vyfakturována', 'splátky vyfakturovány', 'splátek vyfakturováno') + ', nezaplaceno', c: 'var(--gold)' },
+    { k: 'Přišlo · ' + C.monShort(T), fx: 'paid', v: K(inc.cur.total), n: Math.round(inc.cur.total / 100), sub: 'skutečné platby tento měsíc', c: 'var(--fg)' },
     { k: 'Celkem čeká', v: K(tot.WAITING + tot.READY), n: Math.round((tot.WAITING + tot.READY) / 100), sub: 'lze fakturovat + budoucí nároky', c: 'var(--mint)' },
     urodaTile(),
     domoveoTile(I),
@@ -135,7 +135,7 @@ function viewTed(I) {
         : `<span class="tagc">Klid</span><div class="hl">Zatím nic zvláštního.</div><div class="meta">Dívám se na čísla. Až mi něco nebude sedět, ozvu se.</div>`}
       </div></div></section>
   </div>
-  <div class="grid g4 m6">${metrics.map(m => `<div class="card metric${m.a ? ' click' : ''}"${m.a ? ` data-a="tab" data-t="${m.a}" role="button" tabindex="0"` : ''}><div class="k">${m.k}</div><div class="v" style="color:${m.c}"${m.n != null ? ` data-roll="m-${esc(m.k)}" data-v="${m.n}"` : ''}>${m.v}</div><span>${m.sub}</span></div>`).join('')}</div>
+  <div class="grid g4 m6">${metrics.map(m => `<div class="card metric${m.a ? ' click' : ''}"${m.fx ? ` data-fx="${m.fx}"` : ''}${m.a ? ` data-a="tab" data-t="${m.a}" role="button" tabindex="0"` : ''}><div class="k">${m.k}</div><div class="v" style="color:${m.c}"${m.n != null ? ` data-roll="m-${esc(m.k)}" data-v="${m.n}"` : ''}>${m.v}</div><span>${m.sub}</span></div>`).join('')}</div>
   ${gl.length ? `<section class="card"><div class="k">Na cestě · vyfakturováno, čeká na platbu</div>
     ${gl.map(g => `<div class="row"><div class="l"><b>${g.no ? 'Faktura ' + esc(g.no) : esc(SRC(g.xs[0].source).name + ' · ' + g.xs[0].title)}</b><span>${g.xs.length > 1 || g.no ? g.xs.map(x => esc(x.title)).join(', ') + ' · ' : esc(g.xs[0].label) + ' · '}vyfakturováno ${C.fmtDateShort(g.at)} (${C.diffDays(g.at, T)} dní${C.diffDays(g.at, T) > C.FORECAST_RULE.payAfterInvoice ? ' · <b style="color:var(--coral);display:inline">po termínu platby</b>' : ''})</span></div>
       <span class="mono">${K(g.sum)}</span><button type="button" class="btn" data-a="pay-group" data-k="${esc(g.k)}">Přišlo na účet</button></div>`).join('')}</section>` : ''}
@@ -956,7 +956,7 @@ function handle(e) {
     case 'edit': openEdit(cid); break;
   }
 }
-document.addEventListener('click', e => { if (e.target.closest('[data-a="sel"]')) return; handle(e); });
+document.addEventListener('click', e => { if (e.target.closest('[data-a="sel"]')) return; if (e.target.closest('.elfimg')) { FX.hopElf(); FX.buzz(10); } handle(e); });
 document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[role="button"][data-a]')) { e.preventDefault(); handle(e); } });
 document.addEventListener('change', e => {
   const el = e.target.closest('[data-a="sel"]'); if (!el) return;
