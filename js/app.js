@@ -1,11 +1,12 @@
 // Portmonka 08 – UI nad deterministickým jádrem (core.js) a datovou vrstvou (store.js).
-import * as C from './core.js?v=8.18';
-import { createFirestoreStore, createMemoryStore } from './store.js?v=8.18';
-import * as O from './orbit.js?v=8.18';
-import * as U from './uroda.js?v=8.18';
-import * as DM from './domoveo.js?v=8.18';
-import * as INV from './invoice.js?v=8.18';
-import * as FX from './fx.js?v=8.18';
+import * as C from './core.js?v=8.19';
+import { createFirestoreStore, createMemoryStore } from './store.js?v=8.19';
+import * as O from './orbit.js?v=8.19';
+import * as U from './uroda.js?v=8.19';
+import * as DM from './domoveo.js?v=8.19';
+import * as INV from './invoice.js?v=8.19';
+import * as FX from './fx.js?v=8.19';
+import * as OS from './orbitscene.js?v=8.19';
 
 const DEMO = new URLSearchParams(location.search).has('demo');
 const S = { podklady: {}, goornAdresy: {}, invoiceCfg: null, invoices: [], showInvCfg: false, tab: 'ted', user: null, cases: [], offers: null, uroda: null, schuzky: null, dmView: 'week', dmAnchor: null, urView: 'week', urAnchor: null, urSpan: 6, grp: 'month', collapsed: new Set(), opened: new Set(), loaded: false, filter: 'all', q: '', open: null, incMode: 'month', sel: new Set(), showWhy: false, busy: false, err: null };
@@ -25,8 +26,8 @@ const ICON = {
   reload: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>'
 };
 const MARK = '<svg class="mark" viewBox="0 0 40 40" aria-hidden="true"><rect x="3" y="11" width="34" height="24" rx="8" fill="none" stroke="#5eead4" stroke-width="3"></rect><path d="M11 11 C11 4 29 4 29 11" fill="none" stroke="#b493ff" stroke-width="3" stroke-linecap="round"></path><circle cx="20" cy="23" r="4" fill="#5eead4"></circle><circle cx="31" cy="6" r="2" fill="#f5b84a"></circle></svg>';
-const ELF = (pose = 'klid', size = 96) => `<img class="elfimg" src="img/elf/${pose}.webp?v=8.18" alt="Skřítek Portmonky" width="${size}" height="${size}" loading="lazy">`;
-const SI = (s, sz = 22) => SRC(s).icon ? `<img class="si" src="img/src/${SRC(s).icon}.webp?v=8.18" alt="" width="${sz}" height="${sz}" loading="lazy">` : SRC(s).emoji ? `<span class="si si-e" style="font-size:${Math.round(sz * .8)}px" aria-hidden="true">${SRC(s).emoji}</span>` : '';
+const ELF = (pose = 'klid', size = 96) => `<img class="elfimg" src="img/elf/${pose}.webp?v=8.19" alt="Skřítek Portmonky" width="${size}" height="${size}" loading="lazy">`;
+const SI = (s, sz = 22) => SRC(s).icon ? `<img class="si" src="img/src/${SRC(s).icon}.webp?v=8.19" alt="" width="${sz}" height="${sz}" loading="lazy">` : SRC(s).emoji ? `<span class="si si-e" style="font-size:${Math.round(sz * .8)}px" aria-hidden="true">${SRC(s).emoji}</span>` : '';
 
 function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 2600); }
 
@@ -53,7 +54,7 @@ function header() {
   const tf = [['ted', 'Teď'], ['orbit', 'Orbit'], ['uroda', 'Úroda'], ['domoveo', 'Domoveo'], ['prijem', 'Příjem'], ['pripady', 'Případy'], ['souhrn', 'Souhrn'], ['faktury', 'Faktury']];
   const tx = [['obj', 'Objevitel'], ['lab', 'Laboratoř']];
   return `<header class="top"><div class="top-in">
-    <div class="brand"><img class="logo" src="img/logo-96.webp?v=8.18" alt="" width="44" height="44"><div><b class="wm">Portmonka</b><small>zvědavý účetní skřítek</small></div></div>
+    <div class="brand"><img class="logo" src="img/logo-96.webp?v=8.19" alt="" width="44" height="44"><div><b class="wm">Portmonka</b><small>zvědavý účetní skřítek</small></div></div>
     <nav class="nav" aria-label="Pohledy">
       <div class="ngrp fin" role="group" aria-labelledby="ng-fin"><span class="grp" id="ng-fin">Finance</span><div class="ntabs">${tf.map(t => `<button type="button" class="tab${S.tab === t[0] ? ' on' : ''}" data-a="tab" data-t="${t[0]}">${t[1]}</button>`).join('')}</div></div>
       <div class="ngrp obj" role="group" aria-labelledby="ng-obj"><span class="grp" id="ng-obj">Objevování · připravuju</span><div class="ntabs">${tx.map(t => `<button type="button" class="tab x${S.tab === t[0] ? ' on' : ''}" data-a="tab" data-t="${t[0]}">${t[1]}</button>`).join('')}</div></div></nav>
@@ -68,7 +69,7 @@ function header() {
 function render() {
   const app = $('#app');
   if (!S.user) {
-    app.innerHTML = `<div class="wrap"><section class="login card"><img class="logo big" src="img/logo-96.webp?v=8.18" alt="Logo Portmonky" width="96" height="96">
+    app.innerHTML = `<div class="wrap"><section class="login card"><img class="logo big" src="img/logo-96.webp?v=8.19" alt="Logo Portmonky" width="96" height="96">
       <h1 class="wm">Portmonka</h1><p>Zvědavý účetní skřítek. Přihlas se přes Google, data se ukládají do tvého zabezpečeného prostoru ve Firestore.</p>
       <div class="btns" style="justify-content:center;margin-top:18px"><button type="button" class="btn solid" data-a="login">Přihlásit přes Google</button>
       <a class="btn ghost" href="?demo=1" style="text-decoration:none;display:inline-flex;align-items:center">Prohlédnout s ukázkovými daty</a></div></section></div>`;
@@ -88,7 +89,7 @@ function render() {
   else body = viewSoon(S.tab);
   app.innerHTML = `<div class="wrap">${header()}${S.err ? `<div class="warnbox" style="margin-bottom:14px">${esc(S.err)}</div>` : ''}${body}
     <div class="foot">Portmonka 08 · ${DEMO ? 'ukázková data, nic se neukládá' : esc(S.user.email)} · Matematika = aplikace, interpretace = Skřítek.</div></div>`;
-  FX.rollAll(app);
+  FX.rollAll(app); OS.mountAll(app);
 }
 
 /* ---------------- TEĎ ---------------- */
@@ -225,6 +226,9 @@ function viewOrbit(I) {
     <section class="card"><div class="k">Skřítek hlídá orbit</div>
       <div class="elf" style="margin-top:12px">${ELF(pose, 104)}<div class="bubble"><div class="hl">${esc(hl)}</div><div class="meta">${esc(meta)}</div></div></div></section>
   </div>
+  <section class="card"><div class="k">Soustava · každý náklad je planeta</div>
+    <div class="meta" style="margin:4px 0 10px">Raketa doletí na planetu, až je náklad zaplacený ze skutečných příjmů. „S fakturami“ a odhad planetu jen zbarví, nic neodemyká.</div>
+    ${OS.sceneHtml({ planets: o.costs.map(c => ({ name: c.label, emoji: c.emoji, amountMinor: c.amountMinor, pct: c.amountMinor ? Math.round(c.sure / c.amountMinor * 100) : 0, state: c.state })) })}</section>
   <section class="card"><div class="k">Stupně rakety · náklady podle splatnosti</div>
     ${o.costs.map(c => `<div class="row"><div class="l"><b>${c.emoji} ${esc(c.label)}</b><span>${c.running ? 'průběžně celý měsíc' : 'splatné ' + C.fmtDateShort(c.due)}${c.note ? ' · ' + esc(c.note) : ''}${c.assumed ? ' · <i>' + esc(c.assumed) + '</i>' : ''}</span></div><span class="mono">${K(c.amountMinor)}</span>${stateTxt(c)}</div>`).join('')}
   </section>
