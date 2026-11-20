@@ -326,3 +326,10 @@ a{color:var(--mint)}
 .dmtiles .usrc b{font-size:12px}
 .dmtiles .usrc .v{font-size:15px;overflow-wrap:anywhere}
 .dmtiles .usrc .meta{font-size:11px;line-height:1.3}
+
+/* pohyb */
+@keyframes hitpulse{0%{transform:scale(1)}40%{transform:scale(1.07)}100%{transform:scale(1)}}
+.hit{animation:hitpulse .5s}
+.hero .big,.metric .v{font-variant-numeric:tabular-nums}
+.ibtn[data-a="calm"]{font-size:18px}
+.calm *,.calm *::after{animation:none!important;transition-duration:.01s!important}

@@ -1,10 +1,11 @@
 // Portmonka 08 – UI nad deterministickým jádrem (core.js) a datovou vrstvou (store.js).
-import * as C from './core.js?v=8.13';
-import { createFirestoreStore, createMemoryStore } from './store.js?v=8.13';
-import * as O from './orbit.js?v=8.13';
-import * as U from './uroda.js?v=8.13';
-import * as DM from './domoveo.js?v=8.13';
-import * as INV from './invoice.js?v=8.13';
+import * as C from './core.js?v=8.14';
+import { createFirestoreStore, createMemoryStore } from './store.js?v=8.14';
+import * as O from './orbit.js?v=8.14';
+import * as U from './uroda.js?v=8.14';
+import * as DM from './domoveo.js?v=8.14';
+import * as INV from './invoice.js?v=8.14';
+import * as FX from './fx.js?v=8.14';
 
 const DEMO = new URLSearchParams(location.search).has('demo');
 const S = { podklady: {}, goornAdresy: {}, invoiceCfg: null, invoices: [], showInvCfg: false, tab: 'ted', user: null, cases: [], offers: null, uroda: null, schuzky: null, dmView: 'week', dmAnchor: null, urView: 'week', urAnchor: null, urSpan: 6, grp: 'month', collapsed: new Set(), opened: new Set(), loaded: false, filter: 'all', q: '', open: null, incMode: 'month', sel: new Set(), showWhy: false, busy: false, err: null };
@@ -24,8 +25,8 @@ const ICON = {
   reload: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>'
 };
 const MARK = '<svg class="mark" viewBox="0 0 40 40" aria-hidden="true"><rect x="3" y="11" width="34" height="24" rx="8" fill="none" stroke="#5eead4" stroke-width="3"></rect><path d="M11 11 C11 4 29 4 29 11" fill="none" stroke="#b493ff" stroke-width="3" stroke-linecap="round"></path><circle cx="20" cy="23" r="4" fill="#5eead4"></circle><circle cx="31" cy="6" r="2" fill="#f5b84a"></circle></svg>';
-const ELF = (pose = 'klid', size = 96) => `<img class="elfimg" src="img/elf/${pose}.webp?v=8.13" alt="Skřítek Portmonky" width="${size}" height="${size}" loading="lazy">`;
-const SI = (s, sz = 22) => SRC(s).icon ? `<img class="si" src="img/src/${SRC(s).icon}.webp?v=8.13" alt="" width="${sz}" height="${sz}" loading="lazy">` : SRC(s).emoji ? `<span class="si si-e" style="font-size:${Math.round(sz * .8)}px" aria-hidden="true">${SRC(s).emoji}</span>` : '';
+const ELF = (pose = 'klid', size = 96) => `<img class="elfimg" src="img/elf/${pose}.webp?v=8.14" alt="Skřítek Portmonky" width="${size}" height="${size}" loading="lazy">`;
+const SI = (s, sz = 22) => SRC(s).icon ? `<img class="si" src="img/src/${SRC(s).icon}.webp?v=8.14" alt="" width="${sz}" height="${sz}" loading="lazy">` : SRC(s).emoji ? `<span class="si si-e" style="font-size:${Math.round(sz * .8)}px" aria-hidden="true">${SRC(s).emoji}</span>` : '';
 
 function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 2600); }
 
@@ -52,12 +53,13 @@ function header() {
   const tf = [['ted', 'Teď'], ['orbit', 'Orbit'], ['uroda', 'Úroda'], ['domoveo', 'Domoveo'], ['prijem', 'Příjem'], ['pripady', 'Případy'], ['souhrn', 'Souhrn'], ['faktury', 'Faktury']];
   const tx = [['obj', 'Objevitel'], ['lab', 'Laboratoř']];
   return `<header class="top"><div class="top-in">
-    <div class="brand"><img class="logo" src="img/logo-96.webp?v=8.13" alt="" width="44" height="44"><div><b class="wm">Portmonka</b><small>zvědavý účetní skřítek</small></div></div>
+    <div class="brand"><img class="logo" src="img/logo-96.webp?v=8.14" alt="" width="44" height="44"><div><b class="wm">Portmonka</b><small>zvědavý účetní skřítek</small></div></div>
     <nav class="nav" aria-label="Pohledy">
       <div class="ngrp fin" role="group" aria-labelledby="ng-fin"><span class="grp" id="ng-fin">Finance</span><div class="ntabs">${tf.map(t => `<button type="button" class="tab${S.tab === t[0] ? ' on' : ''}" data-a="tab" data-t="${t[0]}">${t[1]}</button>`).join('')}</div></div>
       <div class="ngrp obj" role="group" aria-labelledby="ng-obj"><span class="grp" id="ng-obj">Objevování · připravuju</span><div class="ntabs">${tx.map(t => `<button type="button" class="tab x${S.tab === t[0] ? ' on' : ''}" data-a="tab" data-t="${t[0]}">${t[1]}</button>`).join('')}</div></div></nav>
     <div class="user">${DEMO ? '<span class="demo">UKÁZKOVÁ DATA</span>' : ''}
       <button type="button" class="btn solid add" data-a="add">${ICON.plus}<span>Přidat</span></button>
+      <button type="button" class="ibtn" data-a="calm" aria-pressed="${FX.isCalm()}" aria-label="Klidný režim (bez animací)" title="Klidný režim">${FX.isCalm() ? '🌙' : '✨'}</button>
       <button type="button" class="ibtn" data-a="reload" aria-label="Načíst znovu">${ICON.reload}</button>
       <button type="button" class="ibtn" data-a="logout" aria-label="${DEMO ? 'Ukončit ukázku' : 'Odhlásit'}">${ICON.out}</button></div>
   </div></header>`;
@@ -65,7 +67,7 @@ function header() {
 function render() {
   const app = $('#app');
   if (!S.user) {
-    app.innerHTML = `<div class="wrap"><section class="login card"><img class="logo big" src="img/logo-96.webp?v=8.13" alt="Logo Portmonky" width="96" height="96">
+    app.innerHTML = `<div class="wrap"><section class="login card"><img class="logo big" src="img/logo-96.webp?v=8.14" alt="Logo Portmonky" width="96" height="96">
       <h1 class="wm">Portmonka</h1><p>Zvědavý účetní skřítek. Přihlas se přes Google, data se ukládají do tvého zabezpečeného prostoru ve Firestore.</p>
       <div class="btns" style="justify-content:center;margin-top:18px"><button type="button" class="btn solid" data-a="login">Přihlásit přes Google</button>
       <a class="btn ghost" href="?demo=1" style="text-decoration:none;display:inline-flex;align-items:center">Prohlédnout s ukázkovými daty</a></div></section></div>`;
@@ -85,6 +87,7 @@ function render() {
   else body = viewSoon(S.tab);
   app.innerHTML = `<div class="wrap">${header()}${S.err ? `<div class="warnbox" style="margin-bottom:14px">${esc(S.err)}</div>` : ''}${body}
     <div class="foot">Portmonka 08 · ${DEMO ? 'ukázková data, nic se neukládá' : esc(S.user.email)} · Matematika = aplikace, interpretace = Skřítek.</div></div>`;
+  FX.rollAll(app);
 }
 
 /* ---------------- TEĎ ---------------- */
@@ -102,9 +105,9 @@ function viewTed(I) {
   const groups = {}; for (const i of inv) { const k = i.invoiceId || ('solo:' + i.caseId + i.id); (groups[k] = groups[k] || []).push(i); }
   const gl = Object.entries(groups).map(([k, xs]) => ({ k, xs, no: xs[0].invoiceNo, at: xs[0].invoicedAt, sum: C.sumMinor(xs) })).sort((a, b) => a.at.localeCompare(b.at));
   const metrics = [
-    { k: 'Na cestě', v: K(tot.INVOICED), sub: inv.length + ' ' + plural(inv.length, 'splátka vyfakturována', 'splátky vyfakturovány', 'splátek vyfakturováno') + ', nezaplaceno', c: '#f5b84a' },
-    { k: 'Přišlo · ' + C.monShort(T), v: K(inc.cur.total), sub: 'skutečné platby tento měsíc', c: '#f1eefe' },
-    { k: 'Celkem čeká', v: K(tot.WAITING + tot.READY), sub: 'lze fakturovat + budoucí nároky', c: '#5eead4' },
+    { k: 'Na cestě', v: K(tot.INVOICED), n: Math.round(tot.INVOICED / 100), sub: inv.length + ' ' + plural(inv.length, 'splátka vyfakturována', 'splátky vyfakturovány', 'splátek vyfakturováno') + ', nezaplaceno', c: '#f5b84a' },
+    { k: 'Přišlo · ' + C.monShort(T), v: K(inc.cur.total), n: Math.round(inc.cur.total / 100), sub: 'skutečné platby tento měsíc', c: '#f1eefe' },
+    { k: 'Celkem čeká', v: K(tot.WAITING + tot.READY), n: Math.round((tot.WAITING + tot.READY) / 100), sub: 'lze fakturovat + budoucí nároky', c: '#5eead4' },
     urodaTile(),
     domoveoTile(I),
     offersTile(S.offers)
@@ -113,7 +116,7 @@ function viewTed(I) {
   <div class="hero">
     <section class="mission"><div class="stars" aria-hidden="true"><i style="left:8%;top:18%"></i><i style="left:72%;top:12%;animation-delay:1s"></i><i style="left:88%;top:62%;animation-delay:2s"></i><i style="left:40%;top:80%;animation-delay:.5s"></i><i style="left:58%;top:30%;animation-delay:1.6s"></i></div>
       <div class="k" style="color:#8fd8cc">Dnešní mise</div>
-      <div class="big">${K(readySum)}</div>
+      <div class="big" data-roll="mise" data-v="${Math.round(readySum / 100)}">${K(readySum)}</div>
       <p>můžeš vyfakturovat hned teď · ${ready.length} ${plural(ready.length, 'položka čeká', 'položky čekají', 'položek čeká')} na tvůj krok</p>
       ${ready.map(i => `<div class="act"><input class="chk" type="checkbox" data-a="sel" data-c="${i.caseId}" data-i="${i.id}" aria-label="Vybrat ${esc(i.title)}" ${S.sel.has(i.caseId + '|' + i.id) ? 'checked' : ''}>
         ${SI(i.source, 32)}
@@ -131,7 +134,7 @@ function viewTed(I) {
         : `<span class="tagc">Klid</span><div class="hl">Zatím nic zvláštního.</div><div class="meta">Dívám se na čísla. Až mi něco nebude sedět, ozvu se.</div>`}
       </div></div></section>
   </div>
-  <div class="grid g4 m6">${metrics.map(m => `<div class="card metric${m.a ? ' click' : ''}"${m.a ? ` data-a="tab" data-t="${m.a}" role="button" tabindex="0"` : ''}><div class="k">${m.k}</div><div class="v" style="color:${m.c}">${m.v}</div><span>${m.sub}</span></div>`).join('')}</div>
+  <div class="grid g4 m6">${metrics.map(m => `<div class="card metric${m.a ? ' click' : ''}"${m.a ? ` data-a="tab" data-t="${m.a}" role="button" tabindex="0"` : ''}><div class="k">${m.k}</div><div class="v" style="color:${m.c}"${m.n != null ? ` data-roll="m-${esc(m.k)}" data-v="${m.n}"` : ''}>${m.v}</div><span>${m.sub}</span></div>`).join('')}</div>
   ${gl.length ? `<section class="card"><div class="k">Na cestě · vyfakturováno, čeká na platbu</div>
     ${gl.map(g => `<div class="row"><div class="l"><b>${g.no ? 'Faktura ' + esc(g.no) : esc(SRC(g.xs[0].source).name + ' · ' + g.xs[0].title)}</b><span>${g.xs.length > 1 || g.no ? g.xs.map(x => esc(x.title)).join(', ') + ' · ' : esc(g.xs[0].label) + ' · '}vyfakturováno ${C.fmtDateShort(g.at)} (${C.diffDays(g.at, T)} dní${C.diffDays(g.at, T) > C.FORECAST_RULE.payAfterInvoice ? ' · <b style="color:#ff7a6b;display:inline">po termínu platby</b>' : ''})</span></div>
       <span class="mono">${K(g.sum)}</span><button type="button" class="btn" data-a="pay-group" data-k="${esc(g.k)}">Přišlo na účet</button></div>`).join('')}</section>` : ''}
@@ -615,7 +618,7 @@ async function invIssue(f, base, items, okMsg) {
   invBuildFn(f, base)(S.invoiceCfg); // kontrola předem
   let inv = null;
   const ok = await run(async () => { inv = await store.issueInvoice(invBuildFn(f, base), items.map(i => ({ caseId: i.caseId, id: i.id }))); }, okMsg);
-  if (ok && inv) INV.openInvoiceWindow(inv);
+  if (ok && inv) { FX.celebrateInvoice(); INV.openInvoiceWindow(inv); }
 }
 function invPreviewNo(cust, who = 'O') { return S.invoiceCfg ? INV.nextNumber(S.invoiceCfg, cust, who, today()).number : '—'; }
 function openDmInvoice(ym) {
@@ -834,7 +837,8 @@ function openPay(list, title) {
   async f => {
     const at = val(f, 'at'); if (!C.isIso(at)) throw new Error('Zadej datum platby.');
     const early = list.find(i => i.invoicedAt && at < i.invoicedAt); if (early) throw new Error('Platba nemůže být dřív než faktura (' + C.fmtDate(early.invoicedAt) + ').');
-    await run(() => store.payItems(list.map(i => ({ caseId: i.caseId, id: i.id })), at), 'Platba zapsána. Příjem se přepočítal.');
+    const okp = await run(() => store.payItems(list.map(i => ({ caseId: i.caseId, id: i.id })), at), 'Platba zapsána. Příjem se přepočítal.');
+    if (okp) FX.celebratePaid();
   }, 'Potvrdit platbu');
 }
 function openDate(title, label, onDate, extraHtml = '') {
@@ -920,6 +924,7 @@ function handle(e) {
     case 'ur-shift': { const n = Number(el.dataset.d), a = S.urAnchor || today(); S.urAnchor = S.urView === 'day' ? C.addDays(a, n) : S.urView === 'week' ? C.addDays(a, 7 * n) : C.addMonths(C.startOfMonth(a), n); if (S.urAnchor > today()) S.urAnchor = today(); render(); break; }
     case 'login': store.signIn().catch(er => { console.error(er); toast('Přihlášení přes Google se nepodařilo.'); }); break;
     case 'logout': store.signOut(); break;
+    case 'calm': FX.setCalm(!FX.isCalm()); render(); toast(FX.isCalm() ? 'Klidný režim: bez animací.' : 'Animace zapnuty.'); break;
     case 'reload': reload().then(() => toast('Načteno.')); break;
     case 'add': openAdd(); break;
     case 'why': S.showWhy = !S.showWhy; render(); break;
