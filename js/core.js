@@ -2,12 +2,12 @@
 // Matematika = aplikace. Všechny částky v haléřích (amountMinor), data jako "RRRR-MM-DD".
 
 export const SOURCES = {
-  'Pro-Factor': { key: 'pf', name: 'Pro-Factor', color: '#f5b84a', trigger: 'uzavření města', icon: 'profactor' },
-  'GOORN':      { key: 'go', name: 'GOORN',      color: '#4ade9b', trigger: 'instalace přístroje', icon: 'goorn' },
-  'Domoveo.cz': { key: 'dm', name: 'Domoveo',    color: '#6ea8ff', trigger: 'podpis objednávky', icon: 'domoveo' },
-  'Grafika':    { key: 'gr', name: 'Grafika',    color: '#c49bff', trigger: 'zakázka', icon: 'grafika' },
-  'Krypto':     { key: 'kr', name: 'Krypto',     color: '#f7931a', trigger: 'výběr do Kč', icon: 'krypto' },
-  'Hravé dřevo':{ key: 'hd', name: 'Hravé dřevo', color: '#d9a066', trigger: 'marže M&M', emoji: '🪵', history: true }
+  'Pro-Factor': { key: 'pf', name: 'Pro-Factor', color: 'var(--c-pf)', trigger: 'uzavření města', icon: 'profactor' },
+  'GOORN':      { key: 'go', name: 'GOORN',      color: 'var(--c-go)', trigger: 'instalace přístroje', icon: 'goorn' },
+  'Domoveo.cz': { key: 'dm', name: 'Domoveo',    color: 'var(--c-dm)', trigger: 'podpis objednávky', icon: 'domoveo' },
+  'Grafika':    { key: 'gr', name: 'Grafika',    color: 'var(--c-gr)', trigger: 'zakázka', icon: 'grafika' },
+  'Krypto':     { key: 'kr', name: 'Krypto',     color: 'var(--c-kr)', trigger: 'výběr do Kč', icon: 'krypto' },
+  'Hravé dřevo':{ key: 'hd', name: 'Hravé dřevo', color: 'var(--c-hd)', trigger: 'marže M&M', emoji: '🪵', history: true }
 };
 export const SOURCE_ORDER = ['Pro-Factor', 'GOORN', 'Domoveo.cz', 'Grafika', 'Krypto', 'Hravé dřevo'];
 // Zdroje, které jdou zadat ručně (Hravé dřevo je jen historie – Myrda 23. 10. 2026).
@@ -27,7 +27,7 @@ export const COND_DOMOVEO = 'Provedení servisu';
 
 export const ST = { WAITING: 'WAITING', READY: 'READY', INVOICED: 'INVOICED', PAID: 'PAID', LOST: 'LOST' };
 export const ST_LABEL = { WAITING: 'Čeká', READY: 'Lze fakturovat', INVOICED: 'Vyfakturováno', PAID: 'Proplaceno', LOST: 'Propadlo' };
-export const ST_COLOR = { WAITING: '#8f89b8', READY: '#5eead4', INVOICED: '#f5b84a', PAID: '#a59fc9', LOST: '#ff7a6b' };
+export const ST_COLOR = { WAITING: 'var(--st-w)', READY: 'var(--st-r)', INVOICED: 'var(--st-i)', PAID: 'var(--st-p)', LOST: 'var(--st-l)' };
 
 /* ---------- data ---------- */
 const DAY = 864e5;

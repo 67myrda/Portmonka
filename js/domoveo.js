@@ -2,7 +2,7 @@
 // podepsáno (podle data podpisu) · odservisováno (podle data provedeného servisu) · jejich součet,
 // počet schůzek, uzavřené objednávky, % úspěšnosti a predikce (≈ odhad, nikdy ne nárok).
 // Deterministické, žádný DOM ani Firestore. Částky v haléřích (amountMinor), jako všude v appce.
-import { addDays, diffDays, startOfWeek, startOfMonth, endOfMonth } from './core.js?v=8.14';
+import { addDays, diffDays, startOfWeek, startOfMonth, endOfMonth } from './core.js?v=8.15';
 
 export const DM_SOURCE = 'Domoveo.cz';
 export const MIN_MEETINGS_FOR_RATE = 8;   // pod tímto počtem provedených schůzek se predikce nepočítá (málo dat)
