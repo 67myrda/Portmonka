@@ -2,7 +2,7 @@
 // podepsáno (podle data podpisu) · odservisováno (podle data provedeného servisu) · jejich součet,
 // počet schůzek, uzavřené objednávky, % úspěšnosti a predikce (≈ odhad, nikdy ne nárok).
 // Deterministické, žádný DOM ani Firestore. Částky v haléřích (amountMinor), jako všude v appce.
-import { addDays, diffDays, startOfWeek, startOfMonth, endOfMonth } from './core.js?v=8.22';
+import { addDays, diffDays, startOfWeek, startOfMonth, endOfMonth } from './core.js?v=8.23';
 
 export const DM_SOURCE = 'Domoveo.cz';
 export const MIN_MEETINGS_FOR_RATE = 8;   // pod tímto počtem provedených schůzek se predikce nepočítá (málo dat)
@@ -79,16 +79,22 @@ export function forecast(view, r, known, ev, sch, today) {
 }
 
 // Celý přehled pro jedno období.
-export function overview(cases, sch, view, anchor, today) {
+// nab = users.domoveoNabidkyDny {'RRRR-MM-DD': {n, b, o}}: nabídky bez podpisu podle dne schůzky (backend z Domovea).
+// Úspěšnost jako v Domoveu: podepsané objednávky ÷ (objednávky + nabídky bez podpisu).
+export function overview(cases, sch, view, anchor, today, nab = null) {
   const ev = events(cases), r = range(view, anchor);
   const sg = inR(ev.signed, r), sv = inR(ev.serviced, r), lost = inR(ev.lost.map(l => ({ ...l })), r);
   const m = meet(sch, r);
   const podepsano = sum(sg), odservisovano = sum(sv);
   const forecastView = forecast(view, r, podepsano, ev, sch, today);
+  const nk = nab ? Object.keys(nab).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).sort() : [];
+  const covered = nk.length && r.to >= nk[0];
+  const nabidek = covered ? nk.filter(k => k >= r.from && k <= r.to).reduce((a, k) => a + (Number(nab[k].n) || 0), 0) : 0;
+  const uspesnostPct = covered && sg.length + nabidek > 0 ? Math.round(sg.length / (sg.length + nabidek) * 100) : null;
   return {
     range: r, podepsano: { minor: podepsano, count: sg.length, items: sg }, odservisovano: { minor: odservisovano, count: sv.length, items: sv },
     soucet: podepsano + odservisovano, schuzky: m, uzavrene: sg.length,
-    uspesnostPct: m.h >= 1 ? Math.min(100, Math.round(sg.length / m.h * 100)) : null, propadle: lost,
+    uspesnostPct, nabidek, zNavstevPct: m.h >= 1 ? Math.min(100, Math.round(sg.length / m.h * 100)) : null, propadle: lost,
     forecast: forecastView
   };
 }

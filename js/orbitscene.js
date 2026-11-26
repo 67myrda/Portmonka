@@ -1,7 +1,7 @@
 // Orbit jako soustava planet: každý náklad měsíce je planeta, raketa doletí na tu, která je kryta ze skutečných plateb.
 // Čistě vizuální vrstva nad daty z orbit.js. Žádná čísla se tu nepočítají, jen se kreslí.
 // Použití: <div class="os" data-orbit='{"planets":[...],"total":..,"pct":..}'></div>; po renderu mountAll(root).
-import { isCalm, confetti, buzz } from './fx.js?v=8.22';
+import { isCalm, confetti, buzz } from './fx.js?v=8.23';
 
 const PAL = ['--blue', '--green', '--coral', '--gold', '--vio', '--mint', '--vio2', '--lime'];
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();

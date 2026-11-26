@@ -1,5 +1,5 @@
 // Živé pozadí: hvězdy a občasná kometa (tmavé téma), jemné plující barevné skvrny (světlé). Jen kosmetika pod obsahem.
-import { isCalm } from './fx.js?v=8.22';
+import { isCalm } from './fx.js?v=8.23';
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 let cv, cx, W = 0, H = 0, stars = [], blobs = [], shoot = null, px = 0, py = 0, started = false;
 const dark = () => document.documentElement.dataset.theme !== 'light';

@@ -1,6 +1,6 @@
 // Datová vrstva Portmonky: Firestore (ostrý provoz) a paměťový režim (ukázková data, nic se neukládá).
 // Model: users/{uid}/cases/{caseId}/installments/{id} + users/{uid}/events/{id}
-import { buildInstallments, localToday, addDays, addMonths, GOORN_PART1_MINOR, GOORN_PART2_MINOR, COND_GOORN, COND_DOMOVEO } from './core.js?v=8.22';
+import { buildInstallments, localToday, addDays, addMonths, GOORN_PART1_MINOR, GOORN_PART2_MINOR, COND_GOORN, COND_DOMOVEO } from './core.js?v=8.23';
 
 const FB = 'https://www.gstatic.com/firebasejs/12.19.0/';
 const firebaseConfig = { apiKey: 'AIzaSyAw4mguBLX5RKw0qponSyGEacwiExt4OkI', authDomain: 'portmonka-951967.firebaseapp.com', projectId: 'portmonka-951967', storageBucket: 'portmonka-951967.firebasestorage.app', messagingSenderId: '723477690356', appId: '1:723477690356:web:261e152b2da52251b2ba1' };
@@ -34,11 +34,12 @@ export async function createFirestoreStore() {
         const is = await F.getDocs(instCol(d.id));
         return { id: d.id, ...d.data(), installments: is.docs.map(z => ({ id: z.id, ...z.data() })) };
       }));
-      let offers = null, uroda = null, podklady = {}, goornAdresy = {}, invoiceCfg = null, invoices = [], schuzky = null, mesic = null;
-      try { const u = await F.getDoc(F.doc(db, 'users', user.uid)); if (u.exists()) { const x = u.data(); offers = x.domoveoNabidky || null; schuzky = x.domoveoSchuzky || null; mesic = x.domoveoMesic || null; uroda = x.uroda || null; podklady = x.domoveoPodklady || {}; goornAdresy = x.goornAdresy || {}; } } catch (e) { console.warn('chiméra nabídek / úroda', e); }
+      let offers = null, uroda = null, podklady = {}, goornAdresy = {}, invoiceCfg = null, invoices = [], schuzky = null, mesic = null, nabidkyDny = null, orbitSaved = null;
+      try { const u = await F.getDoc(F.doc(db, 'users', user.uid)); if (u.exists()) { const x = u.data(); offers = x.domoveoNabidky || null; schuzky = x.domoveoSchuzky || null; mesic = x.domoveoMesic || null; nabidkyDny = x.domoveoNabidkyDny || null; uroda = x.uroda || null; podklady = x.domoveoPodklady || {}; goornAdresy = x.goornAdresy || {}; } } catch (e) { console.warn('chiméra nabídek / úroda', e); }
+      try { const c = await F.getDoc(F.doc(db, 'users', user.uid, 'config', 'orbit')); orbitSaved = c.exists() ? c.data() : null; } catch (e) { console.warn('orbit souhrn', e); }
       try { const c = await F.getDoc(F.doc(db, 'users', user.uid, 'config', 'invoice')); invoiceCfg = c.exists() ? c.data() : null; } catch (e) { console.warn('fakturační nastavení', e); }
       try { const q = await F.getDocs(F.collection(db, 'users', user.uid, 'invoices')); invoices = q.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => String(b.issued).localeCompare(String(a.issued)) || String(b.number).localeCompare(String(a.number))); } catch (e) { console.warn('faktury', e); }
-      return { cases, offers, uroda, podklady, goornAdresy, invoiceCfg, invoices, schuzky, mesic };
+      return { cases, offers, uroda, podklady, goornAdresy, invoiceCfg, invoices, schuzky, mesic, nabidkyDny, orbitSaved };
     },
     async createCase(c, insts) {
       const cRef = F.doc(casesCol()), b = F.writeBatch(db);
@@ -80,6 +81,8 @@ export async function createFirestoreStore() {
       });
     },
     async saveInvoiceConfig(cfg) { await F.setDoc(F.doc(db, 'users', user.uid, 'config', 'invoice'), cfg); },
+    // souhrn Orbitu pro Ranní přehled (backend ho vrací v get_overview)
+    async saveOrbitSummary(o) { await F.setDoc(F.doc(db, 'users', user.uid, 'config', 'orbit'), o); },
     async payItems(items, paidAt) {
       const b = F.writeBatch(db);
       for (const it of items) { b.update(F.doc(instCol(it.caseId), it.id), { paidAt, updatedAt: F.serverTimestamp() }); ev(b, 'INSTALLMENT_PAID', it.caseId, it.id); }
@@ -163,7 +166,8 @@ export function createMemoryStore() {
     mode: 'memory',
     onAuth(cb) { setTimeout(() => cb({ email: 'ukázková data', uid: 'demo' }), 0); },
     signIn() {}, signOut() { location.search = ''; },
-    async load() { return { cases: clone(cases), offers: clone(offers), uroda: clone(uroda), podklady: clone(podklady), goornAdresy: clone(goornAdresy), invoiceCfg: clone(invoiceCfg), invoices: clone(invoices), schuzky: clone(schuzky), mesic: clone(mesic) }; },
+    async load() { return { cases: clone(cases), offers: clone(offers), uroda: clone(uroda), podklady: clone(podklady), goornAdresy: clone(goornAdresy), invoiceCfg: clone(invoiceCfg), invoices: clone(invoices), schuzky: clone(schuzky), mesic: clone(mesic), nabidkyDny: null, orbitSaved: null }; },
+    async saveOrbitSummary() {},
     async issueInvoice(build, items) { const inv = build(clone(invoiceCfg)), id = uid(); invoiceCfg.series[inv.seriesKey] = { yy: inv.yy, next: inv.seq + 1 }; invoices.unshift({ ...inv, id }); for (const it of items) Object.assign(find(it.caseId, it.id), { invoicedAt: inv.issued, invoiceId: id, invoiceNo: inv.number }); return { ...inv, id }; },
     async saveInvoiceConfig(cfg) { Object.assign(invoiceCfg, clone(cfg)); },
     async createCase(c, insts) { const id = uid(); cases.unshift({ ...c, id, createdAt: T, installments: insts.map(i => ({ ...pickInst(i), id: uid() })) }); return id; },

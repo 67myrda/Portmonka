@@ -440,3 +440,18 @@ a{color:var(--mint)}
 .dmsw .gi{display:flex;flex-direction:column;gap:4px;min-width:180px;flex:1}
 .dmsw .gi>b{font-size:1.35rem}
 .dd{font:600 12px ui-monospace,monospace;color:var(--mu)}.dd.up{color:var(--green)}.dd.dn{color:var(--coral)}
+/* Úspěšnost nabídek: celý kruh 0–100 % (26. 11. 2026) */
+.sring{--sz:210px;position:relative;width:var(--sz);aspect-ratio:1;flex:none;margin:4px}
+.sr-scale{position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg,#4a0613 0%,#8e0f24 14%,#d0213c 30%,#ff5c8a 44%,#ff8fb4 50%,#9b5cf6 50.5%,#6d5cf0 58%,#14b8a6 64%,#22c55e 70%,#f97316 70.5%,#fb9a1b 82%,#ffc928 93%,#ffe680 100%);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 20px),#000 calc(100% - 19px));mask:radial-gradient(farthest-side,transparent calc(100% - 20px),#000 calc(100% - 19px))}
+.sr-tick,.sr-dot,.sr-prev{position:absolute;inset:0}
+.sr-tick{transform:rotate(216deg)}.sr-tick::after{content:'';position:absolute;left:50%;top:-5px;width:3px;height:30px;margin-left:-1.5px;border-radius:2px;background:var(--fg)}
+.sr-prev{transform:rotate(calc(var(--q)*3.6deg))}.sr-prev::after{content:'';position:absolute;left:50%;top:4px;width:12px;height:12px;margin-left:-6px;border-radius:50%;background:var(--s1);border:2.5px solid var(--mu)}
+.sr-dot{transform:rotate(calc(var(--p)*3.6deg));animation:srspin 1.8s cubic-bezier(.2,1,.3,1) both}
+.sr-dot::after{content:'';position:absolute;left:50%;top:-4px;width:28px;height:28px;margin-left:-14px;border-radius:50%;background:#fff;border:5px solid var(--vc);box-shadow:0 0 0 3px color-mix(in srgb,var(--vc) 35%,transparent),0 3px 12px rgba(0,0,0,.5)}
+@keyframes srspin{from{transform:rotate(0deg)}}
+@media (prefers-reduced-motion:reduce){.sr-dot{animation:none}}
+.sr-in{position:absolute;inset:26px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:color-mix(in srgb,var(--vc) 10%,var(--s1))}
+.sr-in b{font-size:64px;line-height:1;color:var(--vc);letter-spacing:-.02em}.sr-in b small{font-size:.45em;margin-left:2px}
+.sr-in span{margin-top:4px;font:700 11.5px ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--vc)}
+.dmsucc.v-bad{--vc:#ff4d6d}.dmsucc.v-warn{--vc:#a78bfa}.dmsucc.v-good{--vc:#4ade80}.dmsucc.v-top{--vc:#ffc928}
+@media (max-width:480px){.sring{--sz:180px}.sr-in b{font-size:52px}}

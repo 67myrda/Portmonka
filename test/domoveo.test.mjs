@@ -26,14 +26,14 @@ test('týden: podepsáno, odservisováno, součet; bonus a cizí zdroje ne; stor
   assert.equal(o.odservisovano.minor, 0);
   assert.equal(o.propadle.length, 1);
   assert.equal(o.schuzky.h, 6); assert.equal(o.schuzky.z, 1);
-  assert.equal(o.uzavrene, 2); assert.equal(o.uspesnostPct, 33);
+  assert.equal(o.uzavrene, 2); assert.equal(o.zNavstevPct, 33);
   assert.equal(o.forecast, null, 'minulé období se nepředpovídá');
 });
 test('měsíc: podepsáno 12 000, odservisováno 9 000, součet 21 000', () => {
   const o = D.overview(cases, sch, 'month', T, T);
   assert.equal(o.podepsano.minor, 1200000); assert.equal(o.odservisovano.minor, 900000);
   assert.equal(o.soucet, 2100000);
-  assert.equal(o.schuzky.h, 10); assert.equal(o.uzavrene, 3); assert.equal(o.uspesnostPct, 30);
+  assert.equal(o.schuzky.h, 10); assert.equal(o.uzavrene, 3); assert.equal(o.zNavstevPct, 30);
 });
 test('den: jen události toho dne', () => {
   const o = D.overview(cases, sch, 'day', '2026-11-09', T);
@@ -71,4 +71,11 @@ test('úspěšnost: pásma a cesta k 60 %', () => {
   assert.equal(D.verdict(49).k, 'bad'); assert.equal(D.verdict(57).k, 'warn'); assert.equal(D.verdict(60).k, 'good'); assert.equal(D.verdict(70).k, 'top');
   assert.deepEqual(D.toTarget(20, 35), { need: 3, spare: 0 }); // 23/38 = 60,5 %
   assert.deepEqual(D.toTarget(24, 36), { need: 0, spare: 4 }); // 24/40 = 60 %
+});
+test('úspěšnost nabídek jako v Domoveu: objednávky ÷ (objednávky + nabídky bez podpisu)', () => {
+  const nab = { '2026-11-03': { n: 1, b: 0, o: 1 }, '2026-11-25': { n: 2, b: 1, o: 0 } };
+  const o = D.overview(cases, null, 'month', '2026-11-10', T, nab);
+  assert.equal(o.nabidek, 3); assert.equal(o.uspesnostPct, Math.round(o.uzavrene / (o.uzavrene + 3) * 100));
+  assert.equal(D.overview(cases, null, 'month', '2026-10-10', T, nab).uspesnostPct, null); // před daty = neznámé
+  assert.equal(D.overview(cases, null, 'month', '2026-11-10', T, null).uspesnostPct, null);
 });
