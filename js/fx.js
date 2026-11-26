@@ -118,7 +118,7 @@ export async function guide(steps, from) {
   if (guiding) return; const live = steps.filter(s => document.querySelector(s.sel)); if (!live.length) return; guiding = true;
   const [s0] = [live[gi++ % live.length]], t = document.querySelector(s0.sel);
   const rv = document.createElement('div'); rv.style.cssText = 'position:absolute;left:0;top:0;width:88px;height:88px;z-index:95;pointer-events:none;transition:transform 1.1s cubic-bezier(.6,0,.3,1),opacity .3s;opacity:0';
-  const im = document.createElement('img'); im.src = 'img/elf/klid.webp?v=8.21'; im.alt = ''; im.style.cssText = 'width:100%;height:100%;display:block;transform-origin:50% 92%;filter:drop-shadow(0 8px 10px rgba(0,0,0,.25))';
+  const im = document.createElement('img'); im.src = 'img/elf/klid.webp?v=8.22'; im.alt = ''; im.style.cssText = 'width:100%;height:100%;display:block;transform-origin:50% 92%;filter:drop-shadow(0 8px 10px rgba(0,0,0,.25))';
   rv.appendChild(im); const tag = document.createElement('div'); tag.style.cssText = 'position:absolute;z-index:96;max-width:230px;background:var(--fg);color:var(--bg);padding:8px 12px;border-radius:14px;font:700 14px system-ui;opacity:0;transform:translateY(6px);transition:opacity .3s,transform .3s;pointer-events:none';
   document.body.append(rv, tag);
   const h = from ? docPos(from) : { x: scrollX + 20, y: scrollY + innerHeight - 140 };
@@ -127,7 +127,7 @@ export async function guide(steps, from) {
   t.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'center' }); await sleep(650);
   const p = docPos(t), tx = Math.max(8, Math.min(p.x + p.w - 90, scrollX + innerWidth - 100)), ty = p.y - 70;
   rv.style.transform = `translate(${tx}px,${ty}px)`; await sleep(1150);
-  im.src = 'img/elf/napad.webp?v=8.21'; tag.textContent = s0.text; tag.style.left = Math.max(8, Math.min(tx - 120, scrollX + innerWidth - 240)) + 'px'; tag.style.top = (ty + 92) + 'px'; tag.style.opacity = 1; tag.style.transform = 'none';
+  im.src = 'img/elf/napad.webp?v=8.22'; tag.textContent = s0.text; tag.style.left = Math.max(8, Math.min(tx - 120, scrollX + innerWidth - 240)) + 'px'; tag.style.top = (ty + 92) + 'px'; tag.style.opacity = 1; tag.style.transform = 'none';
   const card = t.closest('.card,.mission') || t; hit(card); buzz(15); ding([660, 990]);
   await sleep(2600); tag.style.opacity = 0; rv.style.opacity = 0; await sleep(350); rv.remove(); tag.remove(); guiding = false;
 }
