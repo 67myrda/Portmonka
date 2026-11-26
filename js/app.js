@@ -1,17 +1,17 @@
 // Portmonka 08 – UI nad deterministickým jádrem (core.js) a datovou vrstvou (store.js).
-import * as C from './core.js?v=8.21';
-import { createFirestoreStore, createMemoryStore } from './store.js?v=8.21';
-import * as O from './orbit.js?v=8.21';
-import * as U from './uroda.js?v=8.21';
-import * as DM from './domoveo.js?v=8.21';
-import * as INV from './invoice.js?v=8.21';
-import * as FX from './fx.js?v=8.21';
-import * as OS from './orbitscene.js?v=8.21';
-import * as TS from './timescene.js?v=8.21';
-import { startSky } from './sky.js?v=8.21';
+import * as C from './core.js?v=8.22';
+import { createFirestoreStore, createMemoryStore } from './store.js?v=8.22';
+import * as O from './orbit.js?v=8.22';
+import * as U from './uroda.js?v=8.22';
+import * as DM from './domoveo.js?v=8.22';
+import * as INV from './invoice.js?v=8.22';
+import * as FX from './fx.js?v=8.22';
+import * as OS from './orbitscene.js?v=8.22';
+import * as TS from './timescene.js?v=8.22';
+import { startSky } from './sky.js?v=8.22';
 
 const DEMO = new URLSearchParams(location.search).has('demo');
-const S = { podklady: {}, goornAdresy: {}, invoiceCfg: null, invoices: [], showInvCfg: false, tab: 'ted', user: null, cases: [], offers: null, uroda: null, schuzky: null, dmView: 'week', dmAnchor: null, urView: 'week', urAnchor: null, urSpan: 6, grp: 'month', collapsed: new Set(), opened: new Set(), loaded: false, filter: 'all', q: '', open: null, incMode: 'month', sel: new Set(), showWhy: false, busy: false, err: null };
+const S = { podklady: {}, goornAdresy: {}, invoiceCfg: null, invoices: [], showInvCfg: false, tab: 'ted', user: null, cases: [], offers: null, uroda: null, schuzky: null, mesic: null, dmView: 'week', dmAnchor: null, urView: 'week', urAnchor: null, urSpan: 6, grp: 'month', collapsed: new Set(), opened: new Set(), loaded: false, filter: 'all', q: '', open: null, incMode: 'month', sel: new Set(), showWhy: false, busy: false, err: null };
 let store = null;
 
 const $ = s => document.querySelector(s);
@@ -28,8 +28,8 @@ const ICON = {
   reload: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>'
 };
 const MARK = '<svg class="mark" viewBox="0 0 40 40" aria-hidden="true"><rect x="3" y="11" width="34" height="24" rx="8" fill="none" stroke="#5eead4" stroke-width="3"></rect><path d="M11 11 C11 4 29 4 29 11" fill="none" stroke="#b493ff" stroke-width="3" stroke-linecap="round"></path><circle cx="20" cy="23" r="4" fill="#5eead4"></circle><circle cx="31" cy="6" r="2" fill="#f5b84a"></circle></svg>';
-const ELF = (pose = 'klid', size = 96) => `<img class="elfimg" src="img/elf/${pose}.webp?v=8.21" alt="Skřítek Portmonky" width="${size}" height="${size}" loading="lazy">`;
-const SI = (s, sz = 22) => SRC(s).icon ? `<img class="si" src="img/src/${SRC(s).icon}.webp?v=8.21" alt="" width="${sz}" height="${sz}" loading="lazy">` : SRC(s).emoji ? `<span class="si si-e" style="font-size:${Math.round(sz * .8)}px" aria-hidden="true">${SRC(s).emoji}</span>` : '';
+const ELF = (pose = 'klid', size = 96) => `<img class="elfimg" src="img/elf/${pose}.webp?v=8.22" alt="Skřítek Portmonky" width="${size}" height="${size}" loading="lazy">`;
+const SI = (s, sz = 22) => SRC(s).icon ? `<img class="si" src="img/src/${SRC(s).icon}.webp?v=8.22" alt="" width="${sz}" height="${sz}" loading="lazy">` : SRC(s).emoji ? `<span class="si si-e" style="font-size:${Math.round(sz * .8)}px" aria-hidden="true">${SRC(s).emoji}</span>` : '';
 
 function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 2600); }
 
@@ -38,7 +38,7 @@ function items() { return C.withStatus(C.flatten(S.cases), today()); }
 function caseById(id) { return S.cases.find(c => c.id === id); }
 function instById(cid, iid) { return caseById(cid)?.installments.find(i => i.id === iid); }
 async function reload() {
-  try { const r = await store.load(); S.cases = r.cases; S.offers = r.offers || null; S.uroda = r.uroda || null; S.schuzky = r.schuzky || null; S.podklady = r.podklady || {}; S.goornAdresy = r.goornAdresy || {}; S.invoiceCfg = r.invoiceCfg || null; S.invoices = r.invoices || []; S.loaded = true; S.err = null; }
+  try { const r = await store.load(); S.cases = r.cases; S.offers = r.offers || null; S.uroda = r.uroda || null; S.schuzky = DM.normSchuzky(r.schuzky || null); S.mesic = r.mesic || null; S.podklady = r.podklady || {}; S.goornAdresy = r.goornAdresy || {}; S.invoiceCfg = r.invoiceCfg || null; S.invoices = r.invoices || []; S.loaded = true; S.err = null; }
   catch (e) { console.error(e); S.err = 'Data se nepodařilo načíst: ' + (e.code || e.message); }
   render();
   const bad = S.cases.filter(c => !C.integrity(c));
@@ -56,7 +56,7 @@ function header() {
   const tf = [['ted', 'Teď'], ['orbit', 'Orbit'], ['uroda', 'Úroda'], ['domoveo', 'Domoveo'], ['prijem', 'Příjem'], ['pripady', 'Případy'], ['souhrn', 'Souhrn'], ['faktury', 'Faktury']];
   const tx = [['obj', 'Objevitel'], ['lab', 'Laboratoř']];
   return `<header class="top"><div class="top-in">
-    <div class="brand"><img class="logo" src="img/logo-96.webp?v=8.21" alt="" width="44" height="44"><div><b class="wm">Portmonka</b><small>zvědavý účetní skřítek</small></div></div>
+    <div class="brand"><img class="logo" src="img/logo-96.webp?v=8.22" alt="" width="44" height="44"><div><b class="wm">Portmonka</b><small>zvědavý účetní skřítek</small></div></div>
     <nav class="nav" aria-label="Pohledy">
       <div class="ngrp fin" role="group" aria-labelledby="ng-fin"><span class="grp" id="ng-fin">Finance</span><div class="ntabs">${tf.map(t => `<button type="button" class="tab${S.tab === t[0] ? ' on' : ''}" data-a="tab" data-t="${t[0]}">${t[1]}</button>`).join('')}</div></div>
       <div class="ngrp obj" role="group" aria-labelledby="ng-obj"><span class="grp" id="ng-obj">Objevování · připravuju</span><div class="ntabs">${tx.map(t => `<button type="button" class="tab x${S.tab === t[0] ? ' on' : ''}" data-a="tab" data-t="${t[0]}">${t[1]}</button>`).join('')}</div></div></nav>
@@ -73,7 +73,7 @@ let lastTab = null;
 function render() {
   const app = $('#app');
   if (!S.user) {
-    app.innerHTML = `<div class="wrap"><section class="login card"><img class="logo big" src="img/logo-96.webp?v=8.21" alt="Logo Portmonky" width="96" height="96">
+    app.innerHTML = `<div class="wrap"><section class="login card"><img class="logo big" src="img/logo-96.webp?v=8.22" alt="Logo Portmonky" width="96" height="96">
       <h1 class="wm">Portmonka</h1><p>Zvědavý účetní skřítek. Přihlas se přes Google, data se ukládají do tvého zabezpečeného prostoru ve Firestore.</p>
       <div class="btns" style="justify-content:center;margin-top:18px"><button type="button" class="btn solid" data-a="login">Přihlásit přes Google</button>
       <a class="btn ghost" href="?demo=1" style="text-decoration:none;display:inline-flex;align-items:center">Prohlédnout s ukázkovými daty</a></div></section></div>`;
@@ -561,6 +561,55 @@ function dmForecast(o, v) {
     ${f.servisPlan ? `<div class="meta">Servisy s plánovaným termínem do konce ${end}: ${K(f.servisPlan)} (odservisováno, pokud proběhnou).</div>` : ''}</section>`;
 }
 function dmRows(xs, color) { return xs.length ? xs.slice().sort((a, b) => b.date.localeCompare(a.date)).map(x => `<div class="row" data-a="open" data-c="${x.id}" style="cursor:pointer"><div class="l"><b>${esc(x.title)}</b><span>${C.fmtDateShort(x.date)}</span></div><span class="mono" style="color:${color}">${K(x.amountMinor)}</span></div>`).join('') : '<div class="empty">Nic v tomto období.</div>'; }
+const MON_N = ['leden', 'únor', 'březen', 'duben', 'květen', 'červen', 'červenec', 'srpen', 'září', 'říjen', 'listopad', 'prosinec'];
+const MON_L = ['lednu', 'únoru', 'březnu', 'dubnu', 'květnu', 'červnu', 'červenci', 'srpnu', 'září', 'říjnu', 'listopadu', 'prosinci'];
+const dmDm = iso => iso ? `${+iso.slice(8, 10)}. ${+iso.slice(5, 7)}.` : '';
+function dmGauge(pct, prev) {
+  const R = 86, cx = 110, cy = 104, ang = v => Math.PI * (1 - Math.min(100, Math.max(0, v)) / 100), pt = (v, r = R) => [cx + r * Math.cos(ang(v)), cy - r * Math.sin(ang(v))];
+  const arc = (a, b, c) => { const [x1, y1] = pt(a), [x2, y2] = pt(b); return `<path d="M${x1.toFixed(1)} ${y1.toFixed(1)} A${R} ${R} 0 0 1 ${x2.toFixed(1)} ${y2.toFixed(1)}" stroke="${c}" class="gz"/>`; };
+  const [a1, b1] = pt(DM.TARGET_PCT, R - 16), [a2, b2] = pt(DM.TARGET_PCT, R + 12);
+  const pm = prev != null ? (() => { const [x, y] = pt(prev, R + 13); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4" class="gp"/>`; })() : '';
+  return `<svg viewBox="0 0 220 122" class="dmg" aria-hidden="true">${arc(0, 49.6, 'var(--coral)')}${arc(50.4, 59.6, 'var(--gold)')}${arc(60.4, 69.6, 'var(--green)')}${arc(70.4, 100, 'var(--vio)')}
+    <line x1="${a1.toFixed(1)}" y1="${b1.toFixed(1)}" x2="${a2.toFixed(1)}" y2="${b2.toFixed(1)}" class="gt"/><text x="${(a2 + 6).toFixed(1)}" y="${(b2 - 2).toFixed(1)}" class="gtl">cíl ${DM.TARGET_PCT}</text>${pm}
+    <g class="gn" style="--rot:${(Math.min(100, Math.max(0, pct)) * 1.8 - 90).toFixed(1)}deg"><line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy - R + 10}"/><circle cx="${cx}" cy="${cy}" r="7"/></g></svg>`;
+}
+// Přehled běžícího měsíce z Domovea (backend 1× za hodinu ve všední dny). Odpovídá tabulce, kterou chce Myrda vidět jako první.
+function dmMesicCard(T) {
+  const m = S.mesic;
+  if (!m) return `<section class="card"><div class="k">Domoveo · tento měsíc</div><div class="meta">Přehled měsíce zatím nedorazil z backendu (čte Domoveo jednou za hodinu ve všední dny).</div></section>`;
+  const mi = +m.obdobi.slice(5, 7) - 1, cur = m.obdobi === T.slice(0, 7), zak = n => n + ' ' + plural(n, 'zakázka', 'zakázky', 'zakázek');
+  const row = (l, sub, v, cls = '') => `<div class="dmr ${cls}"><span>${l}${sub ? `<small>${sub}</small>` : ''}</span><b class="mono">${K(v)}</b></div>`;
+  let h = `<section class="card dmm"><div class="k">Domoveo · marže · ${MON_N[mi]}${cur ? '' : ' (stará data)'}</div><div class="dmt">
+    ${row('Odservisováno', 'jde k výplatě ' + dmDm(m.podklad), m.odservisovanoMinor)}
+    ${row('+ servis naplánovaný do ' + dmDm(m.uzaverka), zak(m.planPocet), m.planMinor)}
+    ${row('+ schůzky ' + m.schuzkyPocet + ' × ' + m.schuzkySazba + ' Kč', 'bez podpisu klienta se neplatí', m.schuzkyMinor)}
+    ${row('= pravděpodobně fakturujeme', 'podklad ' + dmDm(m.podklad) + ' ráno, Domoveo platí hned po doručení faktury', m.pravdepodobneMinor, 's')}
+    ${row('+ zatím bez termínu servisu', zak(m.bezTerminuPocet), m.bezTerminuMinor)}
+    ${row('= vše sepsané v ' + MON_L[mi], 'když proběhnou všechny servisy', m.vseMinor, 's2')}</div>
+    <div class="meta">Provize ${m.sazbaFiremni} % (vlastní klient ${m.sazbaVlastni} %) z ceny bez DPH + ${m.schuzkySazba} Kč za schůzku. Servis po ${dmDm(m.uzaverka)} se posune do dalšího podkladu.${m.technici > 1 ? ' Součet za ' + m.technici + ' techniky.' : ''}</div></section>`;
+  const u = m.uspesnost;
+  if (u) {
+    const v = DM.verdict(u.pct), tt = DM.toTarget(u.objednavky, u.formulare), dl = u.minulyPct != null ? u.pct - u.minulyPct : null, pmi = (mi + 11) % 12;
+    h += `<section class="card dmsucc v-${v.k}"><div class="k">Úspěšnost nabídek · ${MON_N[mi]}</div><div class="dmsw"><div class="gw">${dmGauge(u.pct, u.minulyPct)}<div class="gv"><b class="disp">${u.pct} %</b><span>${v.t}</span></div></div>
+      <div class="gi"><b class="disp">${u.objednavky} z ${u.formulare}</b><span>nabídek sepsaných u klienta je objednávka</span>
+      ${dl != null ? `<span class="dd ${dl > 0 ? 'up' : dl < 0 ? 'dn' : ''}">${dl > 0 ? '▲ +' : dl < 0 ? '▼ ' : '■ '}${dl} b. proti ${MON_L[pmi]} (${u.minulyPct} %)</span>` : ''}
+      <span>${tt.need ? `Do ${DM.TARGET_PCT} % chybí <b>${tt.need}</b> ${plural(tt.need, 'objednávka', 'objednávky', 'objednávek')} v řadě.` : `Rezerva: ještě <b>${tt.spare}</b> ${plural(tt.spare, 'nabídka', 'nabídky', 'nabídek')} bez podpisu a jste nad ${DM.TARGET_PCT} %.`}</span>
+      <span class="meta">${u.obratPct != null ? 'Podle obratu ' + u.obratPct + ' %. ' : ''}Schůzky bez zájmu se nepočítají.${m.objednavky ? ` Objednávky ${m.objednavky.n} za ${K(m.objednavky.kc * 100)}, nabídky ${m.nabidky ? m.nabidky.n : 0}${m.poTerminu && m.poTerminu.n ? ' + ' + m.poTerminu.n + ' po termínu' : ''} (s DPH).` : ''}</span></div></div></section>`;
+  }
+  const r = m.doporuceni;
+  if (r && r.zadano != null) {
+    const pmi = (mi + 11) % 12, dd = (a, b, f) => a == null || b == null ? '' : `<span class="dd ${a > b ? 'up' : a < b ? 'dn' : ''}">${a > b ? '▲' : a < b ? '▼' : '■'} ${f(b)} v ${MON_L[pmi]}</span>`;
+    const tile = (k, val, sub, extra = '', c = 'var(--blue)') => `<div class="usrc"><b style="color:${c}">${k}</b><span class="v">${val}</span><span class="meta">${sub}</span>${extra}</div>`;
+    const f1 = x => String(x).replace('.', ',');
+    h += `<section class="card"><div class="k">Doporučení · ${MON_N[mi]}</div><div class="usrcs dmtiles" style="margin-top:8px">
+      ${tile('Zadáno', String(r.zadano), 'od 1. dne měsíce', dd(r.zadano, r.minuleZadano, String))}
+      ${tile('Ø na zakázku', r.prumer == null ? '–' : f1(r.prumer), r.zakazek != null ? r.zadano + ' ÷ ' + zak(r.zakazek) : '', dd(r.prumer, r.minulyPrumer, x => 'Ø ' + f1(x)))}
+      ${tile('Navoláno → schůzka', r.konverzePct == null ? '–' : r.konverzePct + ' %', r.vyrizeno != null ? r.schuzka + ' z ' + r.vyrizeno + ' vyřízených' : '', '', r.konverzePct != null && r.konverzePct >= 10 ? 'var(--green)' : 'var(--gold)')}
+      ${tile('Čeká na volání', r.ceka == null ? '–' : String(r.ceka), 'nové a rozvolané kontakty')}</div>
+      <div class="meta">Stav kontaktů nastavuje dispečink Domovea. ${m.updatedAt ? 'Aktualizováno ' + new Date(m.updatedAt).toLocaleString('cs-CZ', { timeZone: 'Europe/Prague', day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' }) + '.' : ''}</div></section>`;
+  }
+  return h;
+}
 function viewDomoveo() {
   const T = today(), v = S.dmView; if (!S.dmAnchor) S.dmAnchor = T;
   const o = DM.overview(S.cases, S.schuzky, v, S.dmAnchor, T), r = o.range, cols = DM.columns(S.cases, S.schuzky, v, S.dmAnchor, T);
@@ -568,7 +617,7 @@ function viewDomoveo() {
   const nextDis = r.to >= T, prevDis = r.from <= '2026-01-01';
   const tile = (k, val, sub, c) => `<div class="usrc"><b style="color:${c}">${k}</b><span class="v">${val}</span><span class="meta">${sub}</span></div>`;
   const old = S.schuzky && S.schuzky.updatedAt;
-  return `<div class="grid"><section class="card urhead"><div class="urtop"><div><div class="k">Domoveo · marže podle dne</div><h2 class="disp urh">${DM_VIEWS.find(x => x[0] === v)[1]}</h2></div>${seg}</div>
+  return `<div class="grid">${dmMesicCard(T)}<section class="card urhead"><div class="urtop"><div><div class="k">Domoveo · marže podle dne</div><h2 class="disp urh">${DM_VIEWS.find(x => x[0] === v)[1]}</h2></div>${seg}</div>
     <div class="unav"><button type="button" class="ibtn" data-a="dm-shift" data-d="-1" aria-label="Předchozí" ${prevDis ? 'disabled' : ''}>‹</button><span class="mono">${dmLabel(v, r)}</span><button type="button" class="ibtn" data-a="dm-shift" data-d="1" aria-label="Další" ${nextDis ? 'disabled' : ''}>›</button></div>
     <div class="usrcs dmtiles" style="margin-top:10px">
       ${tile('Podepsáno', K(o.podepsano.minor), o.podepsano.count + ' ' + plural(o.podepsano.count, 'objednávka', 'objednávky', 'objednávek') + ' · podle dne podpisu', DM_COL.signed)}
@@ -579,7 +628,7 @@ function viewDomoveo() {
       <div class="usrcs dmtiles" style="margin-top:8px">
         ${tile('Schůzky', String(o.schuzky.h), 'provedeno' + (o.schuzky.z ? ' · ' + o.schuzky.z + ' zrušeno' : '') + (o.schuzky.p ? ' · ' + o.schuzky.p + ' naplánováno' : ''), 'var(--fg2)')}
         ${tile('Uzavřeno', String(o.uzavrene), plural(o.uzavrene, 'objednávka', 'objednávky', 'objednávek') + (o.propadle.length ? ' · ' + o.propadle.length + ' storno' : ''), DM_COL.signed)}
-        ${tile('Úspěšnost', o.uspesnostPct == null ? '–' : o.uspesnostPct + ' %', 'uzavřeno ÷ provedené schůzky', 'var(--vio2)')}</div>
+        ${tile('Z návštěv', o.uspesnostPct == null ? '–' : o.uspesnostPct + ' %', 'objednávky ÷ provedené schůzky (jiné číslo než úspěšnost nabídek Domovea)', 'var(--vio2)')}</div>
       ${S.schuzky ? '' : '<div class="warnbox" style="margin-top:10px">Schůzky po dnech zatím nedorazily z úlohy „Domoveo provize do Portmonky“. Počty schůzek a predikce se objeví po jejím dalším běhu.</div>'}</section>
     ${dmForecast(o, v)}
     <section class="card"><div class="ukey"><span style="color:${DM_COL.signed}">■ <b>podepsáno</b></span><span style="color:${DM_COL.serviced}">■ <b>odservisováno</b></span><span>pod dnem: <b>N×</b> provedené schůzky, <b>(N)</b> naplánované</span></div>${dmChart(cols)}${v !== 'day' ? '<div class="meta">Ťukni na sloupec a otevře se ten den.</div>' : ''}${old ? `<div class="meta">Schůzky naposledy aktualizovány ${C.fmtDate(old)}.</div>` : ''}</section>

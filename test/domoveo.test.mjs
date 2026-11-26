@@ -60,3 +60,15 @@ test('týden se nepředpovídá po konci a den vůbec; sloupce = 7 dní', () => 
   assert.equal(cols[0].signed, 400000); assert.equal(cols[0].h, 4);
   assert.equal(cols.filter(c => c.future).length, 2);
 });
+
+test('schůzky z Firestore (plochý tvar) se převedou na dny', () => {
+  const n = D.normSchuzky({ updatedAt: '2026-11-26', '2026-11-25': { h: 3, z: 2, p: 0 }, '2026-11-27': { h: 0, z: 0, p: 1 } });
+  assert.deepEqual(n, { updatedAt: '2026-11-26', dny: { '2026-11-25': { h: 3, z: 2, p: 0 }, '2026-11-27': { h: 0, z: 0, p: 1 } } });
+  const d = { updatedAt: 'x', dny: {} }; assert.equal(D.normSchuzky(d), d); assert.equal(D.normSchuzky(null), null);
+  const o = D.overview([], n, 'week', '2026-11-25', '2026-11-26'); assert.equal(o.schuzky.h, 3);
+});
+test('úspěšnost: pásma a cesta k 60 %', () => {
+  assert.equal(D.verdict(49).k, 'bad'); assert.equal(D.verdict(57).k, 'warn'); assert.equal(D.verdict(60).k, 'good'); assert.equal(D.verdict(70).k, 'top');
+  assert.deepEqual(D.toTarget(20, 35), { need: 3, spare: 0 }); // 23/38 = 60,5 %
+  assert.deepEqual(D.toTarget(24, 36), { need: 0, spare: 4 }); // 24/40 = 60 %
+});

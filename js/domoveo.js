@@ -2,7 +2,7 @@
 // podepsáno (podle data podpisu) · odservisováno (podle data provedeného servisu) · jejich součet,
 // počet schůzek, uzavřené objednávky, % úspěšnosti a predikce (≈ odhad, nikdy ne nárok).
 // Deterministické, žádný DOM ani Firestore. Částky v haléřích (amountMinor), jako všude v appce.
-import { addDays, diffDays, startOfWeek, startOfMonth, endOfMonth } from './core.js?v=8.21';
+import { addDays, diffDays, startOfWeek, startOfMonth, endOfMonth } from './core.js?v=8.22';
 
 export const DM_SOURCE = 'Domoveo.cz';
 export const MIN_MEETINGS_FOR_RATE = 8;   // pod tímto počtem provedených schůzek se predikce nepočítá (málo dat)
@@ -101,4 +101,25 @@ export function columns(cases, sch, view, anchor, today) {
     cols.push({ day: d, future: d > today, signed: sum(ev.signed.filter(e => e.date === d)), serviced: sum(ev.serviced.filter(e => e.date === d)), h: x.h || 0, z: x.z || 0, p: x.p || 0 });
   }
   return cols;
+}
+
+// ---------------- Přehled měsíce z backendu (users.domoveoMesic, zadání Myrdy 26. 11. 2026) ----------------
+// Firestore ukládá schůzky ploše {updatedAt, 'RRRR-MM-DD': {h,z,p}}; výpočty čtou {updatedAt, dny}.
+export function normSchuzky(x) {
+  if (!x || x.dny) return x || null;
+  const dny = {};
+  for (const [k, v] of Object.entries(x)) if (/^\d{4}-\d{2}-\d{2}$/.test(k) && v) dny[k] = v;
+  return { updatedAt: x.updatedAt || null, dny };
+}
+export const TARGET_PCT = 60;
+// Pásma úspěšnosti nabídek: pod 50 neúspěch, 50–59 pod cílem, 60–69 cíl drží, od 70 výborně.
+export function verdict(pct) {
+  if (pct == null) return null;
+  return pct < 50 ? { k: 'bad', t: 'Pod hranou' } : pct < 60 ? { k: 'warn', t: 'Pod cílem' } : pct < 70 ? { k: 'good', t: 'Cíl drží' } : { k: 'top', t: 'Výborně' };
+}
+// Kolik objednávek v řadě chybí do cíle, nebo kolik nabídek bez podpisu ještě unese.
+export function toTarget(won, forms, target = TARGET_PCT / 100) {
+  if (!(forms > 0)) return { need: 0, spare: 0 };
+  if (won / forms < target) return { need: Math.max(1, Math.ceil((target * forms - won) / (1 - target))), spare: 0 };
+  return { need: 0, spare: Math.max(0, Math.floor(won / target - forms + 1e-9)) };
 }

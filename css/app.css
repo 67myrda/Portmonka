@@ -414,3 +414,29 @@ a{color:var(--mint)}
 #app.enter .grid>*:nth-child(5){animation-delay:.24s}#app.enter .grid>*:nth-child(n+6){animation-delay:.3s}
 #app.enter .urrow,#app.enter .case{animation:enterup .4s both}
 @media (prefers-reduced-motion:reduce){#app.enter *{animation:none!important}}
+/* Domoveo · přehled měsíce (26. 11. 2026) */
+.dmt{display:flex;flex-direction:column;border:1px solid var(--ln);border-radius:14px;overflow:hidden;margin-top:8px}
+.dmr{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:8px 12px;font-size:14px}
+.dmr+.dmr{border-top:1px solid var(--ln2)}
+.dmr small{display:block;font-size:12px;color:var(--mu)}
+.dmr b{white-space:nowrap;font-size:15px}
+.dmr.s{background:rgba(74,222,155,.12)}.dmr.s>span{font-weight:700}.dmr.s b{color:var(--green);font-size:1.45rem}
+.dmr.s2{background:rgba(110,168,255,.10)}.dmr.s2>span{font-weight:700}.dmr.s2 b{color:var(--blue);font-size:1.2rem}
+.dmsucc{--vc:var(--green);border:1.5px solid var(--vc);background:linear-gradient(180deg,color-mix(in srgb,var(--vc) 12%,var(--s1)),var(--s1))}
+.dmsucc.v-bad{--vc:var(--coral)}.dmsucc.v-warn{--vc:var(--gold)}.dmsucc.v-good{--vc:var(--green)}.dmsucc.v-top{--vc:var(--vio)}
+.dmsw{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-top:6px}
+.dmsw .gw{width:210px;flex:none}
+.dmg{width:100%;display:block;overflow:visible}
+.dmg .gz{fill:none;stroke-width:15;opacity:.9}
+.dmg .gt{stroke:var(--fg);stroke-width:2.5}.dmg .gtl{font:600 10px ui-monospace,monospace;fill:var(--mu)}
+.dmg .gp{fill:var(--s1);stroke:var(--mu);stroke-width:2}
+.dmg .gn line{stroke:var(--vc);stroke-width:5;stroke-linecap:round}.dmg .gn circle{fill:var(--vc)}
+.dmg .gn{transform-origin:110px 104px;transform:rotate(var(--rot));animation:dmneedle 1.6s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes dmneedle{from{transform:rotate(-90deg)}to{transform:rotate(var(--rot))}}
+@media (prefers-reduced-motion:reduce){.dmg .gn{animation:none}}
+.dmsw .gv{display:flex;flex-direction:column;align-items:center;margin-top:2px}
+.dmsw .gv b{font-size:2.3rem;color:var(--vc);line-height:1}
+.dmsw .gv span{font:700 11px ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--vc)}
+.dmsw .gi{display:flex;flex-direction:column;gap:4px;min-width:180px;flex:1}
+.dmsw .gi>b{font-size:1.35rem}
+.dd{font:600 12px ui-monospace,monospace;color:var(--mu)}.dd.up{color:var(--green)}.dd.dn{color:var(--coral)}

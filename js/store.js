@@ -1,6 +1,6 @@
 // Datová vrstva Portmonky: Firestore (ostrý provoz) a paměťový režim (ukázková data, nic se neukládá).
 // Model: users/{uid}/cases/{caseId}/installments/{id} + users/{uid}/events/{id}
-import { buildInstallments, localToday, addDays, addMonths, GOORN_PART1_MINOR, GOORN_PART2_MINOR, COND_GOORN, COND_DOMOVEO } from './core.js?v=8.21';
+import { buildInstallments, localToday, addDays, addMonths, GOORN_PART1_MINOR, GOORN_PART2_MINOR, COND_GOORN, COND_DOMOVEO } from './core.js?v=8.22';
 
 const FB = 'https://www.gstatic.com/firebasejs/12.19.0/';
 const firebaseConfig = { apiKey: 'AIzaSyAw4mguBLX5RKw0qponSyGEacwiExt4OkI', authDomain: 'portmonka-951967.firebaseapp.com', projectId: 'portmonka-951967', storageBucket: 'portmonka-951967.firebasestorage.app', messagingSenderId: '723477690356', appId: '1:723477690356:web:261e152b2da52251b2ba1' };
@@ -34,11 +34,11 @@ export async function createFirestoreStore() {
         const is = await F.getDocs(instCol(d.id));
         return { id: d.id, ...d.data(), installments: is.docs.map(z => ({ id: z.id, ...z.data() })) };
       }));
-      let offers = null, uroda = null, podklady = {}, goornAdresy = {}, invoiceCfg = null, invoices = [], schuzky = null;
-      try { const u = await F.getDoc(F.doc(db, 'users', user.uid)); if (u.exists()) { const x = u.data(); offers = x.domoveoNabidky || null; schuzky = x.domoveoSchuzky || null; uroda = x.uroda || null; podklady = x.domoveoPodklady || {}; goornAdresy = x.goornAdresy || {}; } } catch (e) { console.warn('chiméra nabídek / úroda', e); }
+      let offers = null, uroda = null, podklady = {}, goornAdresy = {}, invoiceCfg = null, invoices = [], schuzky = null, mesic = null;
+      try { const u = await F.getDoc(F.doc(db, 'users', user.uid)); if (u.exists()) { const x = u.data(); offers = x.domoveoNabidky || null; schuzky = x.domoveoSchuzky || null; mesic = x.domoveoMesic || null; uroda = x.uroda || null; podklady = x.domoveoPodklady || {}; goornAdresy = x.goornAdresy || {}; } } catch (e) { console.warn('chiméra nabídek / úroda', e); }
       try { const c = await F.getDoc(F.doc(db, 'users', user.uid, 'config', 'invoice')); invoiceCfg = c.exists() ? c.data() : null; } catch (e) { console.warn('fakturační nastavení', e); }
       try { const q = await F.getDocs(F.collection(db, 'users', user.uid, 'invoices')); invoices = q.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => String(b.issued).localeCompare(String(a.issued)) || String(b.number).localeCompare(String(a.number))); } catch (e) { console.warn('faktury', e); }
-      return { cases, offers, uroda, podklady, goornAdresy, invoiceCfg, invoices, schuzky };
+      return { cases, offers, uroda, podklady, goornAdresy, invoiceCfg, invoices, schuzky, mesic };
     },
     async createCase(c, insts) {
       const cRef = F.doc(casesCol()), b = F.writeBatch(db);
@@ -151,13 +151,19 @@ export function createMemoryStore() {
   const pm = T.slice(0, 7), prevYm = addMonths(T.slice(0, 7) + '-01', -1).slice(0, 7);
   const podklady = { [pm]: { mesic: pm, castkaMinor: 593200, prijato: T.slice(0, 8) + '11', predmet: 'Podklad k fakturaci (ukázka)' } };
   const goornAdresy = {};
+  // ukázkový přehled měsíce Domovea (vymyšlená čísla)
+  const nx = addMonths(T.slice(0, 7) + '-01', 1).slice(0, 7);
+  const mesic = { obdobi: T.slice(0, 7), technici: 1, uzaverka: nx + '-10', podklad: nx + '-11', sazbaFiremni: 17, sazbaVlastni: 25, updatedAt: T + 'T10:00:00Z',
+    odservisovanoMinor: 1450000, planMinor: 1120000, planPocet: 4, schuzkyMinor: 480000, schuzkyPocet: 32, schuzkySazba: 150, pravdepodobneMinor: 3050000, bezTerminuMinor: 520000, bezTerminuPocet: 5, vseMinor: 3570000, cekaMinor: 1800000,
+    uspesnost: { pct: 62, objednavky: 18, formulare: 29, obratPct: 58, minulyPct: 55 }, objednavky: { n: 18, kc: 210000 }, nabidky: { n: 8, kc: 98000 }, poTerminu: { n: 3, kc: 41000 },
+    doporuceni: { zadano: 48, prumer: 2.7, zakazek: 18, minuleZadano: 31, minulyPrumer: 2.1, vyrizeno: 30, schuzka: 3, ceka: 18, konverzePct: 10 } };
   const find = (cid, id) => cases.find(c => c.id === cid)?.installments.find(i => i.id === id);
   const clone = x => JSON.parse(JSON.stringify(x));
   return {
     mode: 'memory',
     onAuth(cb) { setTimeout(() => cb({ email: 'ukázková data', uid: 'demo' }), 0); },
     signIn() {}, signOut() { location.search = ''; },
-    async load() { return { cases: clone(cases), offers: clone(offers), uroda: clone(uroda), podklady: clone(podklady), goornAdresy: clone(goornAdresy), invoiceCfg: clone(invoiceCfg), invoices: clone(invoices), schuzky: clone(schuzky) }; },
+    async load() { return { cases: clone(cases), offers: clone(offers), uroda: clone(uroda), podklady: clone(podklady), goornAdresy: clone(goornAdresy), invoiceCfg: clone(invoiceCfg), invoices: clone(invoices), schuzky: clone(schuzky), mesic: clone(mesic) }; },
     async issueInvoice(build, items) { const inv = build(clone(invoiceCfg)), id = uid(); invoiceCfg.series[inv.seriesKey] = { yy: inv.yy, next: inv.seq + 1 }; invoices.unshift({ ...inv, id }); for (const it of items) Object.assign(find(it.caseId, it.id), { invoicedAt: inv.issued, invoiceId: id, invoiceNo: inv.number }); return { ...inv, id }; },
     async saveInvoiceConfig(cfg) { Object.assign(invoiceCfg, clone(cfg)); },
     async createCase(c, insts) { const id = uid(); cases.unshift({ ...c, id, createdAt: T, installments: insts.map(i => ({ ...pickInst(i), id: uid() })) }); return id; },
