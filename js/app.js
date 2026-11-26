@@ -1,17 +1,17 @@
 // Portmonka 08 – UI nad deterministickým jádrem (core.js) a datovou vrstvou (store.js).
-import * as C from './core.js?v=8.22';
-import { createFirestoreStore, createMemoryStore } from './store.js?v=8.22';
-import * as O from './orbit.js?v=8.22';
-import * as U from './uroda.js?v=8.22';
-import * as DM from './domoveo.js?v=8.22';
-import * as INV from './invoice.js?v=8.22';
-import * as FX from './fx.js?v=8.22';
-import * as OS from './orbitscene.js?v=8.22';
-import * as TS from './timescene.js?v=8.22';
-import { startSky } from './sky.js?v=8.22';
+import * as C from './core.js?v=8.23';
+import { createFirestoreStore, createMemoryStore } from './store.js?v=8.23';
+import * as O from './orbit.js?v=8.23';
+import * as U from './uroda.js?v=8.23';
+import * as DM from './domoveo.js?v=8.23';
+import * as INV from './invoice.js?v=8.23';
+import * as FX from './fx.js?v=8.23';
+import * as OS from './orbitscene.js?v=8.23';
+import * as TS from './timescene.js?v=8.23';
+import { startSky } from './sky.js?v=8.23';
 
 const DEMO = new URLSearchParams(location.search).has('demo');
-const S = { podklady: {}, goornAdresy: {}, invoiceCfg: null, invoices: [], showInvCfg: false, tab: 'ted', user: null, cases: [], offers: null, uroda: null, schuzky: null, mesic: null, dmView: 'week', dmAnchor: null, urView: 'week', urAnchor: null, urSpan: 6, grp: 'month', collapsed: new Set(), opened: new Set(), loaded: false, filter: 'all', q: '', open: null, incMode: 'month', sel: new Set(), showWhy: false, busy: false, err: null };
+const S = { podklady: {}, goornAdresy: {}, invoiceCfg: null, invoices: [], showInvCfg: false, tab: 'ted', user: null, cases: [], offers: null, uroda: null, schuzky: null, mesic: null, nabidkyDny: null, orbitSaved: null, dmView: 'week', dmAnchor: null, urView: 'week', urAnchor: null, urSpan: 6, grp: 'month', collapsed: new Set(), opened: new Set(), loaded: false, filter: 'all', q: '', open: null, incMode: 'month', sel: new Set(), showWhy: false, busy: false, err: null };
 let store = null;
 
 const $ = s => document.querySelector(s);
@@ -28,8 +28,8 @@ const ICON = {
   reload: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>'
 };
 const MARK = '<svg class="mark" viewBox="0 0 40 40" aria-hidden="true"><rect x="3" y="11" width="34" height="24" rx="8" fill="none" stroke="#5eead4" stroke-width="3"></rect><path d="M11 11 C11 4 29 4 29 11" fill="none" stroke="#b493ff" stroke-width="3" stroke-linecap="round"></path><circle cx="20" cy="23" r="4" fill="#5eead4"></circle><circle cx="31" cy="6" r="2" fill="#f5b84a"></circle></svg>';
-const ELF = (pose = 'klid', size = 96) => `<img class="elfimg" src="img/elf/${pose}.webp?v=8.22" alt="Skřítek Portmonky" width="${size}" height="${size}" loading="lazy">`;
-const SI = (s, sz = 22) => SRC(s).icon ? `<img class="si" src="img/src/${SRC(s).icon}.webp?v=8.22" alt="" width="${sz}" height="${sz}" loading="lazy">` : SRC(s).emoji ? `<span class="si si-e" style="font-size:${Math.round(sz * .8)}px" aria-hidden="true">${SRC(s).emoji}</span>` : '';
+const ELF = (pose = 'klid', size = 96) => `<img class="elfimg" src="img/elf/${pose}.webp?v=8.23" alt="Skřítek Portmonky" width="${size}" height="${size}" loading="lazy">`;
+const SI = (s, sz = 22) => SRC(s).icon ? `<img class="si" src="img/src/${SRC(s).icon}.webp?v=8.23" alt="" width="${sz}" height="${sz}" loading="lazy">` : SRC(s).emoji ? `<span class="si si-e" style="font-size:${Math.round(sz * .8)}px" aria-hidden="true">${SRC(s).emoji}</span>` : '';
 
 function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 2600); }
 
@@ -37,10 +37,21 @@ function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add
 function items() { return C.withStatus(C.flatten(S.cases), today()); }
 function caseById(id) { return S.cases.find(c => c.id === id); }
 function instById(cid, iid) { return caseById(cid)?.installments.find(i => i.id === iid); }
+// Souhrn Orbitu do users/{uid}/config/orbit, aby ho viděl Ranní přehled. Zapisuje jen při změně.
+async function orbitPublish() {
+  try {
+    if (!S.loaded || !store.saveOrbitSummary) return;
+    const o = O.orbit(items(), today()), x = { ym: o.ym, pct: o.pct, pctSure: o.pctSure, pctLikely: o.pctLikely, totalMinor: o.total, sureMinor: o.layers.sure, allMinor: o.layers.all };
+    const p = S.orbitSaved;
+    if (p && ['ym', 'pct', 'pctSure', 'pctLikely', 'totalMinor', 'sureMinor', 'allMinor'].every(k => p[k] === x[k])) return;
+    x.at = new Date().toISOString(); await store.saveOrbitSummary(x); S.orbitSaved = x;
+  } catch (e) { console.warn('orbit souhrn', e); }
+}
 async function reload() {
-  try { const r = await store.load(); S.cases = r.cases; S.offers = r.offers || null; S.uroda = r.uroda || null; S.schuzky = DM.normSchuzky(r.schuzky || null); S.mesic = r.mesic || null; S.podklady = r.podklady || {}; S.goornAdresy = r.goornAdresy || {}; S.invoiceCfg = r.invoiceCfg || null; S.invoices = r.invoices || []; S.loaded = true; S.err = null; }
+  try { const r = await store.load(); S.cases = r.cases; S.offers = r.offers || null; S.uroda = r.uroda || null; S.schuzky = DM.normSchuzky(r.schuzky || null); S.mesic = r.mesic || null; S.nabidkyDny = r.nabidkyDny || null; S.orbitSaved = r.orbitSaved || null; S.podklady = r.podklady || {}; S.goornAdresy = r.goornAdresy || {}; S.invoiceCfg = r.invoiceCfg || null; S.invoices = r.invoices || []; S.loaded = true; S.err = null; }
   catch (e) { console.error(e); S.err = 'Data se nepodařilo načíst: ' + (e.code || e.message); }
   render();
+  orbitPublish();
   const bad = S.cases.filter(c => !C.integrity(c));
   if (bad.length) toast('Pozor: ' + bad.length + ' ' + plural(bad.length, 'případ má', 'případy mají', 'případů má') + ' nesedící součet splátek.');
 }
@@ -56,7 +67,7 @@ function header() {
   const tf = [['ted', 'Teď'], ['orbit', 'Orbit'], ['uroda', 'Úroda'], ['domoveo', 'Domoveo'], ['prijem', 'Příjem'], ['pripady', 'Případy'], ['souhrn', 'Souhrn'], ['faktury', 'Faktury']];
   const tx = [['obj', 'Objevitel'], ['lab', 'Laboratoř']];
   return `<header class="top"><div class="top-in">
-    <div class="brand"><img class="logo" src="img/logo-96.webp?v=8.22" alt="" width="44" height="44"><div><b class="wm">Portmonka</b><small>zvědavý účetní skřítek</small></div></div>
+    <div class="brand"><img class="logo" src="img/logo-96.webp?v=8.23" alt="" width="44" height="44"><div><b class="wm">Portmonka</b><small>zvědavý účetní skřítek</small></div></div>
     <nav class="nav" aria-label="Pohledy">
       <div class="ngrp fin" role="group" aria-labelledby="ng-fin"><span class="grp" id="ng-fin">Finance</span><div class="ntabs">${tf.map(t => `<button type="button" class="tab${S.tab === t[0] ? ' on' : ''}" data-a="tab" data-t="${t[0]}">${t[1]}</button>`).join('')}</div></div>
       <div class="ngrp obj" role="group" aria-labelledby="ng-obj"><span class="grp" id="ng-obj">Objevování · připravuju</span><div class="ntabs">${tx.map(t => `<button type="button" class="tab x${S.tab === t[0] ? ' on' : ''}" data-a="tab" data-t="${t[0]}">${t[1]}</button>`).join('')}</div></div></nav>
@@ -73,7 +84,7 @@ let lastTab = null;
 function render() {
   const app = $('#app');
   if (!S.user) {
-    app.innerHTML = `<div class="wrap"><section class="login card"><img class="logo big" src="img/logo-96.webp?v=8.22" alt="Logo Portmonky" width="96" height="96">
+    app.innerHTML = `<div class="wrap"><section class="login card"><img class="logo big" src="img/logo-96.webp?v=8.23" alt="Logo Portmonky" width="96" height="96">
       <h1 class="wm">Portmonka</h1><p>Zvědavý účetní skřítek. Přihlas se přes Google, data se ukládají do tvého zabezpečeného prostoru ve Firestore.</p>
       <div class="btns" style="justify-content:center;margin-top:18px"><button type="button" class="btn solid" data-a="login">Přihlásit přes Google</button>
       <a class="btn ghost" href="?demo=1" style="text-decoration:none;display:inline-flex;align-items:center">Prohlédnout s ukázkovými daty</a></div></section></div>`;
@@ -564,6 +575,11 @@ function dmRows(xs, color) { return xs.length ? xs.slice().sort((a, b) => b.date
 const MON_N = ['leden', 'únor', 'březen', 'duben', 'květen', 'červen', 'červenec', 'srpen', 'září', 'říjen', 'listopad', 'prosinec'];
 const MON_L = ['lednu', 'únoru', 'březnu', 'dubnu', 'květnu', 'červnu', 'červenci', 'srpnu', 'září', 'říjnu', 'listopadu', 'prosinci'];
 const dmDm = iso => iso ? `${+iso.slice(8, 10)}. ${+iso.slice(5, 7)}.` : '';
+// Úspěšnost jako celý kruh 0–100 %: rudá → růžová (do 50), fialová → zelená (51–70), oranžová → zlatá (od 71); bod = skóre.
+function dmRing(pct, prev, label) {
+  const r = Math.min(100, Math.max(0, pct));
+  return `<div class="sring" role="img" aria-label="Úspěšnost nabídek ${pct} procent, ${label}" style="--p:${r}"><div class="sr-scale"></div><div class="sr-tick"></div>${prev != null ? `<div class="sr-prev" style="--q:${Math.min(100, Math.max(0, prev))}" title="minulý měsíc ${prev} %"></div>` : ''}<div class="sr-dot"></div><div class="sr-in"><b class="disp">${pct}<small>%</small></b><span>${label}</span></div></div>`;
+}
 function dmGauge(pct, prev) {
   const R = 86, cx = 110, cy = 104, ang = v => Math.PI * (1 - Math.min(100, Math.max(0, v)) / 100), pt = (v, r = R) => [cx + r * Math.cos(ang(v)), cy - r * Math.sin(ang(v))];
   const arc = (a, b, c) => { const [x1, y1] = pt(a), [x2, y2] = pt(b); return `<path d="M${x1.toFixed(1)} ${y1.toFixed(1)} A${R} ${R} 0 0 1 ${x2.toFixed(1)} ${y2.toFixed(1)}" stroke="${c}" class="gz"/>`; };
@@ -590,7 +606,7 @@ function dmMesicCard(T) {
   const u = m.uspesnost;
   if (u) {
     const v = DM.verdict(u.pct), tt = DM.toTarget(u.objednavky, u.formulare), dl = u.minulyPct != null ? u.pct - u.minulyPct : null, pmi = (mi + 11) % 12;
-    h += `<section class="card dmsucc v-${v.k}"><div class="k">Úspěšnost nabídek · ${MON_N[mi]}</div><div class="dmsw"><div class="gw">${dmGauge(u.pct, u.minulyPct)}<div class="gv"><b class="disp">${u.pct} %</b><span>${v.t}</span></div></div>
+    h += `<section class="card dmsucc v-${v.k}"><div class="k">Úspěšnost nabídek · ${MON_N[mi]}</div><div class="dmsw">${dmRing(u.pct, u.minulyPct, v.t)}
       <div class="gi"><b class="disp">${u.objednavky} z ${u.formulare}</b><span>nabídek sepsaných u klienta je objednávka</span>
       ${dl != null ? `<span class="dd ${dl > 0 ? 'up' : dl < 0 ? 'dn' : ''}">${dl > 0 ? '▲ +' : dl < 0 ? '▼ ' : '■ '}${dl} b. proti ${MON_L[pmi]} (${u.minulyPct} %)</span>` : ''}
       <span>${tt.need ? `Do ${DM.TARGET_PCT} % chybí <b>${tt.need}</b> ${plural(tt.need, 'objednávka', 'objednávky', 'objednávek')} v řadě.` : `Rezerva: ještě <b>${tt.spare}</b> ${plural(tt.spare, 'nabídka', 'nabídky', 'nabídek')} bez podpisu a jste nad ${DM.TARGET_PCT} %.`}</span>
@@ -612,7 +628,7 @@ function dmMesicCard(T) {
 }
 function viewDomoveo() {
   const T = today(), v = S.dmView; if (!S.dmAnchor) S.dmAnchor = T;
-  const o = DM.overview(S.cases, S.schuzky, v, S.dmAnchor, T), r = o.range, cols = DM.columns(S.cases, S.schuzky, v, S.dmAnchor, T);
+  const o = DM.overview(S.cases, S.schuzky, v, S.dmAnchor, T, S.nabidkyDny), r = o.range, cols = DM.columns(S.cases, S.schuzky, v, S.dmAnchor, T);
   const seg = `<div class="useg" role="group" aria-label="Období">${DM_VIEWS.map(([k, a]) => `<button type="button" class="${v === k ? 'on' : ''}" aria-pressed="${v === k}" data-a="dm-view" data-v="${k}">${a}</button>`).join('')}</div>`;
   const nextDis = r.to >= T, prevDis = r.from <= '2026-01-01';
   const tile = (k, val, sub, c) => `<div class="usrc"><b style="color:${c}">${k}</b><span class="v">${val}</span><span class="meta">${sub}</span></div>`;
@@ -628,7 +644,7 @@ function viewDomoveo() {
       <div class="usrcs dmtiles" style="margin-top:8px">
         ${tile('Schůzky', String(o.schuzky.h), 'provedeno' + (o.schuzky.z ? ' · ' + o.schuzky.z + ' zrušeno' : '') + (o.schuzky.p ? ' · ' + o.schuzky.p + ' naplánováno' : ''), 'var(--fg2)')}
         ${tile('Uzavřeno', String(o.uzavrene), plural(o.uzavrene, 'objednávka', 'objednávky', 'objednávek') + (o.propadle.length ? ' · ' + o.propadle.length + ' storno' : ''), DM_COL.signed)}
-        ${tile('Z návštěv', o.uspesnostPct == null ? '–' : o.uspesnostPct + ' %', 'objednávky ÷ provedené schůzky (jiné číslo než úspěšnost nabídek Domovea)', 'var(--vio2)')}</div>
+        ${tile('Úspěšnost nabídek', o.uspesnostPct == null ? '–' : o.uspesnostPct + ' %', o.uspesnostPct == null ? 'za toto období chybí data o nabídkách' : o.uzavrene + ' z ' + (o.uzavrene + o.nabidek) + ' · objednávky ÷ (objednávky + nabídky bez podpisu)', 'var(--vio2)')}</div>
       ${S.schuzky ? '' : '<div class="warnbox" style="margin-top:10px">Schůzky po dnech zatím nedorazily z úlohy „Domoveo provize do Portmonky“. Počty schůzek a predikce se objeví po jejím dalším běhu.</div>'}</section>
     ${dmForecast(o, v)}
     <section class="card"><div class="ukey"><span style="color:${DM_COL.signed}">■ <b>podepsáno</b></span><span style="color:${DM_COL.serviced}">■ <b>odservisováno</b></span><span>pod dnem: <b>N×</b> provedené schůzky, <b>(N)</b> naplánované</span></div>${dmChart(cols)}${v !== 'day' ? '<div class="meta">Ťukni na sloupec a otevře se ten den.</div>' : ''}${old ? `<div class="meta">Schůzky naposledy aktualizovány ${C.fmtDate(old)}.</div>` : ''}</section>
