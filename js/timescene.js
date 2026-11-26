@@ -1,5 +1,5 @@
 // Cesta časem: řeka času se splátkami jako hvězdami, skřítek jede po posuvníku. Data = nároky s datem z core.js, nic se nepočítá nově.
-import { isCalm, buzz } from './fx.js?v=8.23';
+import { isCalm, buzz } from './fx.js?v=8.24';
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const resolve = c => { const m = /^var\((--[a-z0-9-]+)\)/.exec(c || ''); return m ? css(m[1]) : (c || '#888'); };
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -13,7 +13,7 @@ function mount(el) {
   const o = JSON.parse(el.dataset.time), P = o.points; // {d, a (minor), c (barva), n (název)}
   const total = P.reduce((s, p) => s + p.a, 0);
   el.innerHTML = `<div class="tsnum"><span class="k">Dozraje do <b class="tsdate">dneška</b></span><div class="tsbig mono">0 Kč</div></div>
-    <div class="tsc" tabindex="-1"><canvas></canvas><img class="tsrider" src="img/elf/cas.webp?v=8.23" alt="" width="64" height="64"></div>
+    <div class="tsc" tabindex="-1"><canvas></canvas><img class="tsrider" src="img/elf/cas.webp?v=8.24" alt="" width="64" height="64"></div>
     <label class="k" for="tsr">Posun v čase</label><input id="tsr" class="tsrng" type="range" min="0" max="${DAYS}" value="${remembered.v}" step="1" aria-label="Posun v čase ve dnech">`;
   const sc = el.querySelector('.tsc'), cv = el.querySelector('canvas'), rider = el.querySelector('.tsrider'), rng = el.querySelector('.tsrng'), big = el.querySelector('.tsbig'), dateEl = el.querySelector('.tsdate');
   let tv = remembered.v, W = 0, H = 0, bursts = [], lastLit = 0, shown = 0, anim = false;
